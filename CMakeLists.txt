@@ -1,65 +1,72 @@
 cmake_minimum_required(VERSION 3.10)
-project(compiler LANGUAGES CXX)
+project(SysYCompiler)
 
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Include antlr4 runtime
+# 查找 Java
+find_package(Java REQUIRED)
+
+# ANTLR jar 路径
+set(ANTLR_JAR ${CMAKE_SOURCE_DIR}/lib/antlr-4.13.1-complete.jar)
+set(ANTLR_OUTPUT_DIR ${CMAKE_SOURCE_DIR}/src/antlr)
+
+# 创建输出目录
+file(MAKE_DIRECTORY ${ANTLR_OUTPUT_DIR})
+
+# ANTLR 生成命令
+add_custom_command(
+    OUTPUT 
+        ${ANTLR_OUTPUT_DIR}/SysYLexer.cpp
+        ${ANTLR_OUTPUT_DIR}/SysYLexer.h
+        ${ANTLR_OUTPUT_DIR}/SysYParser.cpp
+        ${ANTLR_OUTPUT_DIR}/SysYParser.h
+        ${ANTLR_OUTPUT_DIR}/SysYParserBaseVisitor.cpp
+        ${ANTLR_OUTPUT_DIR}/SysYParserBaseVisitor.h
+        ${ANTLR_OUTPUT_DIR}/SysYParserVisitor.cpp
+        ${ANTLR_OUTPUT_DIR}/SysYParserVisitor.h
+    COMMAND ${Java_JAVA_EXECUTABLE} -jar ${ANTLR_JAR}
+        -Dlanguage=Cpp
+        -visitor
+        -no-listener
+        -o ${ANTLR_OUTPUT_DIR}
+        ${CMAKE_SOURCE_DIR}/SysYLexer.g4
+        ${CMAKE_SOURCE_DIR}/SysYParser.g4
+    DEPENDS 
+        ${CMAKE_SOURCE_DIR}/SysYLexer.g4
+        ${CMAKE_SOURCE_DIR}/SysYParser.g4
+    COMMENT "Generating ANTLR parser"
+)
+
+# ANTLR4 运行时
 add_subdirectory(third_party/antlr4-runtime)
 
-# Headers for include
+# 包含目录
 include_directories(
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/antlr4-runtime/runtime/src
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/antlr
+    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/src/antlr
+    ${CMAKE_SOURCE_DIR}/third_party/antlr4-runtime/runtime/src
 )
 
-# Generate executable files
-file(GLOB SRC_FILES
-    src/*.cpp
-    src/antlr/*.cpp
+# 源文件
+set(SOURCES
+    src/main.cpp
+    src/ASTBuilder.cpp
+    src/AST.cpp
+    ${ANTLR_OUTPUT_DIR}/SysYLexer.cpp
+    ${ANTLR_OUTPUT_DIR}/SysYParser.cpp
+    ${ANTLR_OUTPUT_DIR}/SysYParserBaseVisitor.cpp
+    ${ANTLR_OUTPUT_DIR}/SysYParserVisitor.cpp
 )
 
-add_executable(compiler ${SRC_FILES})
+# 可执行文件
+add_executable(compiler ${SOURCES})
 
-# Link runtime
-target_link_libraries(compiler antlr4_shared)
+# 链接库
+target_link_libraries(compiler antlr4_static)
 
-# Set up Google Test
-include(FetchContent)
-FetchContent_Declare(
-  googletest
-  URL https://github.com/google/googletest/archive/03597a01ee50ed33e9fd716149c63099179ad6c5.zip
+# 设置输出目录
+set_target_properties(compiler PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
 )
-
-# For Windows: Prevent overriding the parent project's compiler/linker settings
-set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(googletest)
-
-# Add test executable
-enable_testing()
-
-add_executable(
-  unit_tests
-  # Link your test executable to the gtest/gtest_main library
-)
-
-target_link_libraries(
-  unit_tests
-  gtest_main
-  # Link any libraries your tests need
-)
-
-include(GoogleTest)
-gtest_discover_tests(unit_tests)
-
-# Config ASAN
-option(ENABLE_ASAN "Enable AddressSanitizer" OFF)
-
-if(ENABLE_ASAN)
-    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-        add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
-        add_link_options(-fsanitize=address)
-    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-        add_compile_options(/fsanitize=address)
-    endif()
-endif()
