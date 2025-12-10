@@ -54,6 +54,7 @@ set(SOURCES
     src/main.cpp
     src/ASTBuilder.cpp
     src/AST.cpp
+    src/SymbolTable.cpp
     ${ANTLR_OUTPUT_DIR}/SysYLexer.cpp
     ${ANTLR_OUTPUT_DIR}/SysYParser.cpp
     ${ANTLR_OUTPUT_DIR}/SysYParserBaseVisitor.cpp

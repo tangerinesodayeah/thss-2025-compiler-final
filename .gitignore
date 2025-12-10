@@ -1,3 +1,20 @@
+# Build artifacts
+/build/
+
+# CMake temporary files
+/CMakeFiles/
+/CMakeCache.txt
+/cmake_install.cmake
+
+# Generated ANTLR outputs
+/src/antlr/
+
+# Editor configs
+.vscode/
+.idea/
+
+# OS files
+*.DS_Store
 .vscode/
 .cache/
 .antlr/
