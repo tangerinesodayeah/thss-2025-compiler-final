@@ -55,7 +55,11 @@ set(SOURCES
     src/ASTBuilder.cpp
     src/AST.cpp
     src/SymbolTable.cpp
+    src/IRBuilder.cpp
+    src/IR.cpp
+    src/Type.cpp
     ${ANTLR_OUTPUT_DIR}/SysYLexer.cpp
+
     ${ANTLR_OUTPUT_DIR}/SysYParser.cpp
     ${ANTLR_OUTPUT_DIR}/SysYParserBaseVisitor.cpp
     ${ANTLR_OUTPUT_DIR}/SysYParserVisitor.cpp
@@ -64,8 +68,19 @@ set(SOURCES
 # 可执行文件
 add_executable(compiler ${SOURCES})
 
+# 测试 IRBuilder
+add_executable(ir_test 
+    src/IRBuilderTest.cpp
+    src/IRBuilder.cpp
+    src/IR.cpp
+    src/Type.cpp
+    src/SymbolTable.cpp
+)
+
 # 链接库
 target_link_libraries(compiler antlr4_static)
+target_link_libraries(ir_test antlr4_static) # SymbolTable might not need it but just in case
+
 
 # 设置输出目录
 set_target_properties(compiler PROPERTIES

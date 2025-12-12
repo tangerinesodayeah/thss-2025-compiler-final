@@ -45,4 +45,17 @@ make test
 python package.py
 ```
 
+### IRBuilder
+For Testing The IRBuilder (8 could be replaced with a higher number depending on your CPU cores): 
+
+```bash     
+mkdir build
+cd build
+cmake ..
+cmake --build . -j8
+./ir_test
+```
+
+Note that when using the IRBuilder, you should ensure that all virtual registers (starting with `%`) have unique names to avoid conflicts in the generated LLVM IR. (Already implemeted a renaming mechanism in IRBuilder)
+
 Please submit the `project.zip` to Gradescope.
