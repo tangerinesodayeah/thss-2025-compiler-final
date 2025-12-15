@@ -8,6 +8,10 @@ void IRGenerator::visit(IntLiteral* node) {
 
 void IRGenerator::visit(VarExpr* node) {
     auto addrVoid = builder.symTable->lookup(node->name);
+    if (!addrVoid) {
+        std::cerr << "Error: Variable " << node->name << " not found" << std::endl;
+        return;
+    }
     auto addr = static_cast<ir::Value*>(addrVoid);
     
     if (auto constInt = dynamic_cast<ir::ConstantInt*>(addr)) {
@@ -20,32 +24,35 @@ void IRGenerator::visit(VarExpr* node) {
         // If addr is array type, we should decay to pointer.
         // But here we assume scalar load if no indices.
         // If it is an array, but no indices, it means it's used as a pointer (e.g. func arg).
-        auto ptrTy = static_cast<ir::PointerType*>(addr->getType());
-        if (ptrTy->getPointeeTy()->isArrayTy()) {
-            // Decay array to pointer: &arr[0]
-            std::vector<ir::Value*> indices;
-            indices.push_back(builder.createInt(0));
-            indices.push_back(builder.createInt(0));
-            val = builder.createGEP(addr, indices);
+        if (auto ptrTy = dynamic_cast<ir::PointerType*>(addr->getType())) {
+            if (ptrTy->getPointeeTy()->isArrayTy()) {
+                // Decay array to pointer: &arr[0]
+                std::vector<ir::Value*> indices;
+                indices.push_back(builder.createInt(0));
+                indices.push_back(builder.createInt(0));
+                val = builder.createGEP(addr, indices);
+            } else {
+                val = builder.createLoad(node->name);
+            }
         } else {
-            val = builder.createLoad(node->name);
+             // Should not happen for variables in memory
+             std::cerr << "Error: Variable " << node->name << " is not a pointer" << std::endl;
         }
     } else {
         // Array access
         std::vector<ir::Value*> indices;
-        // First index is 0 if it's a local array (alloca returns pointer to array)
-        // If it's a pointer (func arg), first index is the first dimension.
-        // Wait, alloca returns T*. If T is [10 x i32], we have [10 x i32]*.
-        // To access element, we need 0, i.
-        // If T is i32*, we have i32**. Load gives i32*. Then we index i.
         
-        auto ptrTy = static_cast<ir::PointerType*>(addr->getType());
-        if (ptrTy->getPointeeTy()->isArrayTy()) {
-            indices.push_back(builder.createInt(0));
-        } else if (ptrTy->getPointeeTy()->isPointerTy()) {
-             // It's a pointer variable (e.g. function param int a[] -> int *a)
-             // We need to load the pointer first
-             addr = builder.createLoad(node->name);
+        if (auto ptrTy = dynamic_cast<ir::PointerType*>(addr->getType())) {
+            if (ptrTy->getPointeeTy()->isArrayTy()) {
+                indices.push_back(builder.createInt(0));
+            } else if (ptrTy->getPointeeTy()->isPointerTy()) {
+                 // It's a pointer variable (e.g. function param int a[] -> int *a)
+                 // We need to load the pointer first
+                 addr = builder.createLoad(node->name);
+            }
+        } else {
+             std::cerr << "Error: Array access on non-pointer " << node->name << std::endl;
+             return;
         }
         
         for (auto& idx : node->indices) {
