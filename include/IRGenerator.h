@@ -29,6 +29,10 @@ public:
 
     ir::Value* getVal() { return val; }
 
+    int evalConst(Expr* expr, SymbolTable* symTable);
+    ir::Constant* createGlobalInit(InitListExpr* expr, size_t& index, ir::Type* type);
+    ir::Constant* createZeroInit(ir::Type* type);
+
 private:
     void handleLocalZeroInit(ir::Value* baseAddr, ir::Type* type);
     void handleLocalArrayInit(ir::Value* baseAddr, ir::Type* type, InitListExpr* expr, size_t& index);

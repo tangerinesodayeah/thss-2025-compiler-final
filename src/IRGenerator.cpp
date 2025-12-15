@@ -10,6 +10,11 @@ void IRGenerator::visit(VarExpr* node) {
     auto addrVoid = builder.symTable->lookup(node->name);
     auto addr = static_cast<ir::Value*>(addrVoid);
     
+    if (auto constInt = dynamic_cast<ir::ConstantInt*>(addr)) {
+        val = constInt;
+        return;
+    }
+
     if (node->indices.empty()) {
         // Scalar load or array decay?
         // If addr is array type, we should decay to pointer.
@@ -316,10 +321,14 @@ void IRGenerator::visit(ReturnStmt* node) {
 }
 
 // Helper functions for array initialization
-ir::Constant* createZeroInit(ir::Type* type) {
+// ir::Constant* createZeroInit(ir::Type* type) moved to member function
+
+
+ir::Constant* IRGenerator::createZeroInit(ir::Type* type) {
     if (auto arrTy = dynamic_cast<ir::ArrayType*>(type)) {
         std::vector<ir::Constant*> values;
-        for (size_t i = 0; i < arrTy->getElementCount(); ++i) {
+        size_t size = arrTy->getElementCount();
+        for (size_t i = 0; i < size; ++i) {
             values.push_back(createZeroInit(arrTy->getElementType()));
         }
         return new ir::ConstantArray(arrTy, values);
@@ -328,7 +337,7 @@ ir::Constant* createZeroInit(ir::Type* type) {
     }
 }
 
-ir::Constant* createGlobalInit(InitListExpr* expr, size_t& index, ir::Type* type) {
+ir::Constant* IRGenerator::createGlobalInit(InitListExpr* expr, size_t& index, ir::Type* type) {
     if (auto arrTy = dynamic_cast<ir::ArrayType*>(type)) {
         std::vector<ir::Constant*> values;
         size_t size = arrTy->getElementCount();
@@ -345,12 +354,8 @@ ir::Constant* createGlobalInit(InitListExpr* expr, size_t& index, ir::Type* type
                     if (elemTy->isArrayTy()) {
                         values.push_back(createGlobalInit(expr, index, elemTy));
                     } else {
-                        if (auto lit = dynamic_cast<IntLiteral*>(valExpr.get())) {
-                            values.push_back(ir::ConstantInt::get(lit->value));
-                        } else {
-                            std::cerr << "Warning: Non-literal global initializer, defaulting to 0" << std::endl;
-                            values.push_back(ir::ConstantInt::get(0));
-                        }
+                        int val = evalConst(valExpr.get(), builder.symTable);
+                        values.push_back(ir::ConstantInt::get(val));
                         index++;
                     }
                 }
@@ -368,12 +373,9 @@ ir::Constant* createGlobalInit(InitListExpr* expr, size_t& index, ir::Type* type
                 index++;
                 return res;
             } else {
-                if (auto lit = dynamic_cast<IntLiteral*>(valExpr.get())) {
-                    index++;
-                    return ir::ConstantInt::get(lit->value);
-                }
+                int val = evalConst(valExpr.get(), builder.symTable);
                 index++;
-                return ir::ConstantInt::get(0);
+                return ir::ConstantInt::get(val);
             }
         }
         return ir::ConstantInt::get(0);
@@ -447,18 +449,58 @@ void IRGenerator::visit(InitListExpr* node) {
     // It is handled by VarDecl
 }
 
+int evalConst(Expr* expr, SymbolTable* symTable) {
+    if (auto lit = dynamic_cast<IntLiteral*>(expr)) {
+        return lit->value;
+    }
+    if (auto bin = dynamic_cast<BinaryExpr*>(expr)) {
+        int lhs = evalConst(bin->lhs.get(), symTable);
+        int rhs = evalConst(bin->rhs.get(), symTable);
+        if (bin->op == "+") return lhs + rhs;
+        if (bin->op == "-") return lhs - rhs;
+        if (bin->op == "*") return lhs * rhs;
+        if (bin->op == "/") return rhs ? lhs / rhs : 0;
+        if (bin->op == "%") return rhs ? lhs % rhs : 0;
+    }
+    if (auto una = dynamic_cast<UnaryExpr*>(expr)) {
+        int op = evalConst(una->operand.get(), symTable);
+        if (una->op == "+") return op;
+        if (una->op == "-") return -op;
+        if (una->op == "!") return !op;
+    }
+    if (auto var = dynamic_cast<VarExpr*>(expr)) {
+        auto val = static_cast<ir::Value*>(symTable->lookup(var->name));
+        if (val) {
+            if (auto constInt = dynamic_cast<ir::ConstantInt*>(val)) {
+                return constInt->getValue();
+            }
+        }
+    }
+    if (auto initList = dynamic_cast<InitListExpr*>(expr)) {
+        if (!initList->values.empty()) {
+            return evalConst(initList->values[0].get(), symTable);
+        }
+    }
+    return 0;
+}
+
 void IRGenerator::visit(VarDecl* node) {
     for (auto& def : node->defs) {
         ir::Type *varTy = ir::Type::getInt32Ty();
         if (!def->arrayDimensions.empty()) {
             for (auto it = def->arrayDimensions.rbegin(); it != def->arrayDimensions.rend(); ++it) {
-                (*it)->accept(*this);
-                if (auto lit = dynamic_cast<IntLiteral*>(it->get())) {
-                    varTy = new ir::ArrayType(varTy, lit->value);
-                } else {
-                    std::cerr << "Error: Array dimension must be constant literal" << std::endl;
-                }
+                int dim = evalConst(it->get(), builder.symTable);
+                varTy = new ir::ArrayType(varTy, dim);
             }
+        }
+
+        if (node->isConst && !varTy->isArrayTy()) {
+            int initVal = 0;
+            if (def->initVal) {
+                initVal = evalConst(def->initVal.get(), builder.symTable);
+            }
+            builder.symTable->insert(def->name, ir::ConstantInt::get(initVal));
+            continue;
         }
 
         if (builder.getInsertPoint() == nullptr) {
