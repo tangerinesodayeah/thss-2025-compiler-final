@@ -276,7 +276,7 @@ std::string Function::printFunc() const {
 }
 
 GlobalVariable::GlobalVariable(Type *ty, std::string name, Constant *initVal, Module *parent)
-    : User(new PointerType(ty), name), initVal_(initVal), parent_(parent) {
+    : User(ty, name), initVal_(initVal), parent_(parent) {
     if (parent) parent->addGlobalVariable(this);
 }
 
