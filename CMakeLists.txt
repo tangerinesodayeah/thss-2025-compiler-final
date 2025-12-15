@@ -56,6 +56,7 @@ set(SOURCES
     src/AST.cpp
     src/SymbolTable.cpp
     src/IRBuilder.cpp
+    src/IRGenerator.cpp
     src/IR.cpp
     src/Type.cpp
     ${ANTLR_OUTPUT_DIR}/SysYLexer.cpp
