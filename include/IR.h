@@ -210,6 +210,12 @@ class Module {
 public:
     void addFunction(Function *f) { functions_.push_back(f); }
     void addGlobalVariable(GlobalVariable *g) { globals_.push_back(g); }
+    Function* getFunction(const std::string &name) const {
+        for (auto f : functions_) {
+            if (f->getName() == name) return f;
+        }
+        return nullptr;
+    }
     std::string printModule() const;
 private:
     std::vector<Function*> functions_;

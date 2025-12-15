@@ -171,33 +171,49 @@ void IRGenerator::visit(UnaryExpr* node) {
 }
 
 void IRGenerator::visit(CallExpr* node) {
-    // We need to find the function in the module or symbol table?
-    // The symbol table stores variables. Functions are usually in the module.
-    // But we might need to look them up.
-    // Let's assume we can find function by name from the module.
-    // But IRBuilder doesn't expose module lookup.
-    // We can iterate module functions or add a function map to IRBuilder/Module.
-    // For now, let's assume we can get it.
-    // Actually, we can use builder.module->functions_ but it's private.
-    // We might need to add a lookup method to Module or IRBuilder.
-    
-    // Let's add lookupFunction to IRBuilder or Module.
-    // For now, I'll assume I can't easily lookup without modifying Module.
-    // I'll modify Module to allow lookup or expose functions.
-    // Or I can use a separate map in IRGenerator if I visit functions first.
-    // But functions can be called before definition? SysY allows it?
-    // SysY usually requires declaration or definition before use, or at least declaration.
-    // If we process declarations first, we can store them.
-    
-    // Let's assume we can find it. I'll add a helper to find function.
-    // For now, I'll skip implementation details of lookup and focus on structure.
-    
-    // std::vector<ir::Value*> args;
-    // for (auto& arg : node->args) {
-    //     arg->accept(*this);
-    //     args.push_back(val);
-    // }
-    // val = builder.createCall(func, args);
+    auto func = builder.module->getFunction(node->funcName);
+    if (!func) {
+        // Handle library functions or implicit declarations
+        if (node->funcName == "putint") {
+            std::vector<ir::Type*> paramTypes = { ir::Type::getInt32Ty() };
+            auto funcTy = new ir::FunctionType(ir::Type::getVoidTy(), paramTypes);
+            func = builder.createFunction("putint", funcTy);
+        } else if (node->funcName == "getint") {
+            auto funcTy = new ir::FunctionType(ir::Type::getInt32Ty(), {});
+            func = builder.createFunction("getint", funcTy);
+        } else if (node->funcName == "putch") {
+            std::vector<ir::Type*> paramTypes = { ir::Type::getInt32Ty() };
+            auto funcTy = new ir::FunctionType(ir::Type::getVoidTy(), paramTypes);
+            func = builder.createFunction("putch", funcTy);
+        } else if (node->funcName == "getch") {
+            auto funcTy = new ir::FunctionType(ir::Type::getInt32Ty(), {});
+            func = builder.createFunction("getch", funcTy);
+        } else if (node->funcName == "putarray") {
+            std::vector<ir::Type*> paramTypes = { ir::Type::getInt32Ty(), new ir::PointerType(ir::Type::getInt32Ty()) };
+            auto funcTy = new ir::FunctionType(ir::Type::getVoidTy(), paramTypes);
+            func = builder.createFunction("putarray", funcTy);
+        } else if (node->funcName == "getarray") {
+            std::vector<ir::Type*> paramTypes = { new ir::PointerType(ir::Type::getInt32Ty()) };
+            auto funcTy = new ir::FunctionType(ir::Type::getInt32Ty(), paramTypes);
+            func = builder.createFunction("getarray", funcTy);
+        } else if (node->funcName == "starttime") {
+            auto funcTy = new ir::FunctionType(ir::Type::getVoidTy(), {});
+            func = builder.createFunction("starttime", funcTy);
+        } else if (node->funcName == "stoptime") {
+            auto funcTy = new ir::FunctionType(ir::Type::getVoidTy(), {});
+            func = builder.createFunction("stoptime", funcTy);
+        } else {
+            std::cerr << "Error: Function " << node->funcName << " not found" << std::endl;
+            return;
+        }
+    }
+
+    std::vector<ir::Value*> args;
+    for (auto& arg : node->args) {
+        arg->accept(*this);
+        args.push_back(val);
+    }
+    val = builder.createCall(func, args);
 }
 
 void IRGenerator::visit(AssignStmt* node) {
