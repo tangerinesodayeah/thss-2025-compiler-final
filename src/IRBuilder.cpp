@@ -6,14 +6,27 @@ ir::Value* IRBuilder::createInt(int v) {
 
 ir::Value* IRBuilder::createAlloca(const std::string &name, ir::Type *ty) {
     if (!ty) ty = ir::Type::getInt32Ty();
-    // Alloca should be in the entry block usually, but for simplicity we put it in current block
-    // or we can find the entry block of the current function.
-    // For now, just insert at current point.
-    std::string uniqueName = name;
+    
     if (currentBlock && currentBlock->getParent()) {
-        uniqueName = currentBlock->getParent()->getUniqueName(name);
+        auto func = currentBlock->getParent();
+        if (!func->getBlocks().empty()) {
+            auto entry = func->getBlocks().front();
+            std::string uniqueName = func->getUniqueName(name);
+            
+            auto inst = new ir::AllocaInst(ty, entry, uniqueName);
+            
+            // Move to front of entry block
+            auto &instList = entry->getInstList();
+            if (instList.size() > 1) {
+                 auto it = instList.end();
+                 it--; 
+                 instList.splice(instList.begin(), instList, it);
+            }
+            return inst;
+        }
     }
-    auto inst = new ir::AllocaInst(ty, currentBlock, uniqueName);
+    
+    auto inst = new ir::AllocaInst(ty, currentBlock, name);
     return inst;
 }
 
