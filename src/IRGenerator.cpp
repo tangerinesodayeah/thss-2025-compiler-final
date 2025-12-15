@@ -75,7 +75,10 @@ void IRGenerator::visit(BinaryExpr* node) {
         auto mergeBB = new ir::BasicBlock(func->getUniqueName("and_merge"), func);
         
         // Result variable
-        auto resAddr = builder.createAlloca("and_res", ir::Type::getInt32Ty());
+        auto entryBB = func->getBlocks().front();
+        auto resAddr = new ir::AllocaInst(ir::Type::getInt32Ty(), entryBB, "and_res");
+        entryBB->getInstList().pop_back();
+        entryBB->getInstList().push_front(resAddr);
         // builder.createStore(builder.createInt(0), resAddr); // Default false
         
         node->lhs->accept(*this);
@@ -116,7 +119,10 @@ void IRGenerator::visit(BinaryExpr* node) {
         auto rhsBB = new ir::BasicBlock(func->getUniqueName("or_rhs"), func);
         auto mergeBB = new ir::BasicBlock(func->getUniqueName("or_merge"), func);
         
-        auto resAddr = builder.createAlloca("or_res", ir::Type::getInt32Ty());
+        auto entryBB = func->getBlocks().front();
+        auto resAddr = new ir::AllocaInst(ir::Type::getInt32Ty(), entryBB, "or_res");
+        entryBB->getInstList().pop_back();
+        entryBB->getInstList().push_front(resAddr);
         // builder.createStore(builder.createInt(1), resAddr); // Default true
         
         node->lhs->accept(*this);
@@ -597,7 +603,17 @@ void IRGenerator::visit(FuncDef* node) {
     // Create function type
     std::vector<ir::Type*> paramTypes;
     for (const auto& param : node->params) {
-        paramTypes.push_back(ir::Type::getInt32Ty());
+        ir::Type* paramTy = ir::Type::getInt32Ty();
+        if (!param->arrayDimensions.empty()) {
+            // Array decays to pointer
+            // int a[][5] -> [5 x int]*
+            for (auto it = param->arrayDimensions.rbegin(); it != param->arrayDimensions.rend() - 1; ++it) {
+                int dim = evalConst(it->get(), builder.symTable);
+                paramTy = new ir::ArrayType(paramTy, dim);
+            }
+            paramTy = new ir::PointerType(paramTy);
+        }
+        paramTypes.push_back(paramTy);
     }
     
     ir::Type* retType = node->isVoid ? ir::Type::getVoidTy() : ir::Type::getInt32Ty();
@@ -614,12 +630,21 @@ void IRGenerator::visit(FuncDef* node) {
         auto paramName = node->params[i]->name;
         auto argVal = args[i];
         
-        auto addr = builder.createAlloca(paramName, ir::Type::getInt32Ty());
+        auto addr = builder.createAlloca(paramName, argVal->getType());
         builder.createStore(argVal, addr);
         builder.symTable->insert(paramName, addr);
     }
     
     node->body->accept(*this);
+    
+    // Implicit return
+    if (builder.currentBlock->getInstList().empty() || !builder.currentBlock->getInstList().back()->isTerminator()) {
+        if (node->isVoid) {
+            builder.createRet(nullptr);
+        } else {
+            builder.createRet(builder.createInt(0));
+        }
+    }
     
     builder.symTable->exitScope();
     builder.setInsertPoint(nullptr); // Reset insert point for next global decls
