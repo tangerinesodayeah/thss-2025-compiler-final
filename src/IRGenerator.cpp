@@ -449,7 +449,7 @@ void IRGenerator::visit(InitListExpr* node) {
     // It is handled by VarDecl
 }
 
-int evalConst(Expr* expr, SymbolTable* symTable) {
+int IRGenerator::evalConst(Expr* expr, SymbolTable* symTable) {
     if (auto lit = dynamic_cast<IntLiteral*>(expr)) {
         return lit->value;
     }
