@@ -17,7 +17,9 @@ public:
     std::any visitUninitVarDef(SysYParser::UninitVarDefContext *ctx) override;
     std::any visitInitVarDef(SysYParser::InitVarDefContext *ctx) override;
     std::any visitScalarConstInitVal(SysYParser::ScalarConstInitValContext *ctx) override;
+    std::any visitListConstInitVal(SysYParser::ListConstInitValContext *ctx) override;
     std::any visitScalarInitVal(SysYParser::ScalarInitValContext *ctx) override;
+    std::any visitListInitVal(SysYParser::ListInitValContext *ctx) override;
     std::any visitFuncDef(SysYParser::FuncDefContext *ctx) override;
     std::any visitFuncFParam(SysYParser::FuncFParamContext *ctx) override;
     std::any visitBlock(SysYParser::BlockContext *ctx) override;

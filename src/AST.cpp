@@ -20,6 +20,10 @@ void CallExpr::accept(ASTVisitor& visitor) {
     visitor.visit(this);
 }
 
+void InitListExpr::accept(ASTVisitor& visitor) {
+    visitor.visit(this);
+}
+
 void AssignStmt::accept(ASTVisitor& visitor) {
     visitor.visit(this);
 }

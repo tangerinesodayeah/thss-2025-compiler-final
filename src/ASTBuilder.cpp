@@ -101,8 +101,26 @@ std::any ASTBuilder::visitScalarConstInitVal(SysYParser::ScalarConstInitValConte
     return visitConstExp(ctx->constExp());
 }
 
+std::any ASTBuilder::visitListConstInitVal(SysYParser::ListConstInitValContext *ctx) {
+    auto initList = std::make_unique<InitListExpr>();
+    for (auto initValCtx : ctx->constInitVal()) {
+        auto expr = unwrapPtr<Expr>(visit(initValCtx));
+        initList->values.push_back(std::move(expr));
+    }
+    return wrapPtr(std::move(initList));
+}
+
 std::any ASTBuilder::visitScalarInitVal(SysYParser::ScalarInitValContext *ctx) {
     return visit(ctx->exp());
+}
+
+std::any ASTBuilder::visitListInitVal(SysYParser::ListInitValContext *ctx) {
+    auto initList = std::make_unique<InitListExpr>();
+    for (auto initValCtx : ctx->initVal()) {
+        auto expr = unwrapPtr<Expr>(visit(initValCtx));
+        initList->values.push_back(std::move(expr));
+    }
+    return wrapPtr(std::move(initList));
 }
 
 std::any ASTBuilder::visitFuncDef(SysYParser::FuncDefContext *ctx) {

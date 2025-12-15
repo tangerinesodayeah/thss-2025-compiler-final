@@ -51,6 +51,14 @@ private:
     int value_;
 };
 
+class ConstantArray : public Constant {
+public:
+    ConstantArray(ArrayType *ty, const std::vector<Constant*> &vals) : Constant(ty), values_(vals) {}
+    std::string print() const override;
+private:
+    std::vector<Constant*> values_;
+};
+
 class BasicBlock;
 class Function;
 class Module;

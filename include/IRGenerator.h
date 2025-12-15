@@ -12,6 +12,7 @@ public:
     void visit(BinaryExpr* node) override;
     void visit(UnaryExpr* node) override;
     void visit(CallExpr* node) override;
+    void visit(InitListExpr* node) override;
 
     void visit(AssignStmt* node) override;
     void visit(ExprStmt* node) override;

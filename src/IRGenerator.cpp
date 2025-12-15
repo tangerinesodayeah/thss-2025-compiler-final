@@ -315,28 +315,117 @@ void IRGenerator::visit(ReturnStmt* node) {
     }
 }
 
+// Helper functions for array initialization
+ir::Constant* createZeroInit(ir::Type* type) {
+    if (auto arrTy = dynamic_cast<ir::ArrayType*>(type)) {
+        std::vector<ir::Constant*> values;
+        for (size_t i = 0; i < arrTy->getNumElements(); ++i) {
+            values.push_back(createZeroInit(arrTy->getElementType()));
+        }
+        return new ir::ConstantArray(arrTy, values);
+    } else {
+        return ir::ConstantInt::get(0);
+    }
+}
+
+ir::Constant* createGlobalInit(InitListExpr* expr, ir::Type* type) {
+    if (auto arrTy = dynamic_cast<ir::ArrayType*>(type)) {
+        std::vector<ir::Constant*> values;
+        size_t size = arrTy->getNumElements();
+        auto elemTy = arrTy->getElementType();
+        
+        for (size_t i = 0; i < size; ++i) {
+            if (i < expr->values.size()) {
+                auto valExpr = expr->values[i];
+                if (auto subList = std::dynamic_pointer_cast<InitListExpr>(valExpr)) {
+                    values.push_back(createGlobalInit(subList.get(), elemTy));
+                } else {
+                    if (auto lit = std::dynamic_pointer_cast<IntLiteral>(valExpr)) {
+                        values.push_back(ir::ConstantInt::get(lit->value));
+                    } else {
+                        // Fallback for non-literal constant expressions (not fully supported yet)
+                        std::cerr << "Warning: Non-literal global initializer, defaulting to 0" << std::endl;
+                        values.push_back(ir::ConstantInt::get(0));
+                    }
+                }
+            } else {
+                values.push_back(createZeroInit(elemTy));
+            }
+        }
+        return new ir::ConstantArray(arrTy, values);
+    } else {
+        if (expr->values.empty()) return ir::ConstantInt::get(0);
+        auto valExpr = expr->values[0];
+        if (auto lit = std::dynamic_pointer_cast<IntLiteral>(valExpr)) {
+            return ir::ConstantInt::get(lit->value);
+        }
+        return ir::ConstantInt::get(0);
+    }
+}
+
+void handleLocalZeroInit(IRGenerator* gen, ir::Value* baseAddr, ir::Type* type) {
+    auto& builder = gen->builder;
+    if (auto arrTy = dynamic_cast<ir::ArrayType*>(type)) {
+        size_t size = arrTy->getNumElements();
+        auto elemTy = arrTy->getElementType();
+        for (size_t i = 0; i < size; ++i) {
+            std::vector<ir::Value*> indices;
+            indices.push_back(builder.createInt(0));
+            indices.push_back(builder.createInt(i));
+            auto elemAddr = builder.createGEP(baseAddr, indices);
+            handleLocalZeroInit(gen, elemAddr, elemTy);
+        }
+    } else {
+        builder.createStore(builder.createInt(0), baseAddr);
+    }
+}
+
+void handleLocalArrayInit(IRGenerator* gen, ir::Value* baseAddr, ir::Type* type, InitListExpr* expr) {
+    auto& builder = gen->builder;
+    if (auto arrTy = dynamic_cast<ir::ArrayType*>(type)) {
+        size_t size = arrTy->getNumElements();
+        auto elemTy = arrTy->getElementType();
+        
+        for (size_t i = 0; i < size; ++i) {
+            std::vector<ir::Value*> indices;
+            indices.push_back(builder.createInt(0));
+            indices.push_back(builder.createInt(i));
+            auto elemAddr = builder.createGEP(baseAddr, indices);
+            
+            if (i < expr->values.size()) {
+                auto valExpr = expr->values[i];
+                if (auto subList = std::dynamic_pointer_cast<InitListExpr>(valExpr)) {
+                    handleLocalArrayInit(gen, elemAddr, elemTy, subList.get());
+                } else {
+                    valExpr->accept(*gen);
+                    builder.createStore(gen->val, elemAddr);
+                }
+            } else {
+                handleLocalZeroInit(gen, elemAddr, elemTy);
+            }
+        }
+    } else {
+        if (!expr->values.empty()) {
+            expr->values[0]->accept(*gen);
+            builder.createStore(gen->val, baseAddr);
+        }
+    }
+}
+
+void IRGenerator::visit(InitListExpr* node) {
+    // Should not be visited directly in expression context
+    // It is handled by VarDecl
+}
+
 void IRGenerator::visit(VarDecl* node) {
     for (auto& def : node->defs) {
         ir::Type *varTy = ir::Type::getInt32Ty();
         if (!def->arrayDimensions.empty()) {
-            // Calculate array type
-            // Dimensions are expressions, but for global/local decls they must be constant.
-            // We assume they are IntLiteral for now or simple constant expressions.
-            // We build type from right to left? No, int a[2][3] -> [2 x [3 x i32]]
-            // We need to evaluate dimensions.
-            // Since we don't have constant folding yet, let's assume IntLiteral.
-            
             for (auto it = def->arrayDimensions.rbegin(); it != def->arrayDimensions.rend(); ++it) {
-                // Evaluate dimension size
                 (*it)->accept(*this);
-                // val should be ConstantInt
-                // But accept() generates instructions. We need compile-time constant.
-                // For now, let's cast the expression node to IntLiteral if possible.
-                // This is a limitation: only literal dimensions supported.
                 if (auto lit = dynamic_cast<IntLiteral*>(it->get())) {
                     varTy = new ir::ArrayType(varTy, lit->value);
                 } else {
-                    // Error: non-constant array dimension
                     std::cerr << "Error: Array dimension must be constant literal" << std::endl;
                 }
             }
@@ -345,19 +434,21 @@ void IRGenerator::visit(VarDecl* node) {
         if (builder.getInsertPoint() == nullptr) {
             // Global variable
             ir::Constant *initVal = nullptr;
-            // TODO: Handle array initialization
-            if (varTy->isArrayTy()) {
-                 // Zero init for arrays for now
-                 // We need ConstantArray class for proper initialization
-                 initVal = nullptr; // Will be zeroinitialized
-            } else if (def->initVal) {
-                if (auto lit = dynamic_cast<IntLiteral*>(def->initVal.get())) {
+            if (def->initVal) {
+                if (auto initList = std::dynamic_pointer_cast<InitListExpr>(def->initVal)) {
+                    initVal = createGlobalInit(initList.get(), varTy);
+                } else if (auto lit = std::dynamic_pointer_cast<IntLiteral>(def->initVal)) {
                     initVal = ir::ConstantInt::get(lit->value);
                 } else {
                     initVal = ir::ConstantInt::get(0); 
                 }
             } else {
-                initVal = ir::ConstantInt::get(0);
+                // Zero init
+                if (varTy->isArrayTy()) {
+                    initVal = createZeroInit(varTy);
+                } else {
+                    initVal = ir::ConstantInt::get(0);
+                }
             }
             auto addr = builder.createGlobalVariable(def->name, varTy, initVal);
             builder.symTable->insert(def->name, addr);
@@ -367,10 +458,19 @@ void IRGenerator::visit(VarDecl* node) {
             builder.symTable->insert(def->name, addr);
             
             if (def->initVal) {
-                // TODO: Handle array initialization (memset or element-wise store)
-                if (!varTy->isArrayTy()) {
-                    def->initVal->accept(*this);
-                    builder.createStore(val, addr);
+                if (auto initList = std::dynamic_pointer_cast<InitListExpr>(def->initVal)) {
+                    handleLocalArrayInit(this, addr, varTy, initList.get());
+                } else {
+                    if (!varTy->isArrayTy()) {
+                        def->initVal->accept(*this);
+                        builder.createStore(val, addr);
+                    } else {
+                        // Array initialized with single expression? Not valid in SysY unless it's {exp}
+                        // But parser might produce InitListExpr for {exp}.
+                        // If we are here, it means initVal is NOT InitListExpr.
+                        // So it's like int a[10] = 1; -> Invalid.
+                        // But maybe int a = 1; (scalar)
+                    }
                 }
             }
         }

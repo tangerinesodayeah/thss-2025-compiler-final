@@ -11,6 +11,16 @@ ConstantInt *ConstantInt::getBool(bool val) {
     return new ConstantInt(Type::getInt1Ty(), val ? 1 : 0);
 }
 
+std::string ConstantArray::print() const {
+    std::string s = "[";
+    for (size_t i = 0; i < values_.size(); ++i) {
+        s += values_[i]->getType()->print() + " " + values_[i]->print();
+        if (i < values_.size() - 1) s += ", ";
+    }
+    s += "]";
+    return s;
+}
+
 Instruction::Instruction(Type *ty, OpID id, BasicBlock *parent, std::string name)
     : User(ty, name), id_(id), parent_(parent) {
     if (parent) parent->insert(this);

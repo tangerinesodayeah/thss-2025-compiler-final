@@ -66,6 +66,13 @@ public:
     void accept(ASTVisitor& visitor) override;
 };
 
+class InitListExpr : public Expr {
+public:
+    std::vector<std::unique_ptr<Expr>> values;
+    
+    void accept(ASTVisitor& visitor) override;
+};
+
 // ========== 语句 ==========
 class Stmt : public ASTNode {
 public:
@@ -198,6 +205,7 @@ public:
     virtual void visit(BinaryExpr* node) = 0;
     virtual void visit(UnaryExpr* node) = 0;
     virtual void visit(CallExpr* node) = 0;
+    virtual void visit(InitListExpr* node) = 0;
     
     virtual void visit(AssignStmt* node) = 0;
     virtual void visit(ExprStmt* node) = 0;
