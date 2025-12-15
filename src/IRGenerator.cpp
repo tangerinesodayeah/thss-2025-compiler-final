@@ -71,11 +71,12 @@ void IRGenerator::visit(BinaryExpr* node) {
         // if (lhs) { if (rhs) true else false } else false
         auto func = builder.currentBlock->getParent();
         auto rhsBB = new ir::BasicBlock(func->getUniqueName("and_rhs"), func);
+        auto falseBB = new ir::BasicBlock(func->getUniqueName("and_false"), func);
         auto mergeBB = new ir::BasicBlock(func->getUniqueName("and_merge"), func);
         
         // Result variable
         auto resAddr = builder.createAlloca("and_res", ir::Type::getInt32Ty());
-        builder.createStore(builder.createInt(0), resAddr); // Default false
+        // builder.createStore(builder.createInt(0), resAddr); // Default false
         
         node->lhs->accept(*this);
         auto lhs = val;
@@ -84,8 +85,12 @@ void IRGenerator::visit(BinaryExpr* node) {
             lhs = builder.createBinary("!=", lhs, builder.createInt(0));
         }
         
-        builder.createCondBr(lhs, rhsBB, mergeBB);
+        builder.createCondBr(lhs, rhsBB, falseBB);
         
+        builder.setInsertPoint(falseBB);
+        builder.createStore(builder.createInt(0), resAddr);
+        builder.createBr(mergeBB);
+
         builder.setInsertPoint(rhsBB);
         node->rhs->accept(*this);
         auto rhs = val;
@@ -107,11 +112,12 @@ void IRGenerator::visit(BinaryExpr* node) {
         // Short-circuit OR
         // if (lhs) true else { if (rhs) true else false }
         auto func = builder.currentBlock->getParent();
+        auto trueBB = new ir::BasicBlock(func->getUniqueName("or_true"), func);
         auto rhsBB = new ir::BasicBlock(func->getUniqueName("or_rhs"), func);
         auto mergeBB = new ir::BasicBlock(func->getUniqueName("or_merge"), func);
         
         auto resAddr = builder.createAlloca("or_res", ir::Type::getInt32Ty());
-        builder.createStore(builder.createInt(1), resAddr); // Default true
+        // builder.createStore(builder.createInt(1), resAddr); // Default true
         
         node->lhs->accept(*this);
         auto lhs = val;
@@ -119,8 +125,12 @@ void IRGenerator::visit(BinaryExpr* node) {
             lhs = builder.createBinary("!=", lhs, builder.createInt(0));
         }
         
-        builder.createCondBr(lhs, mergeBB, rhsBB);
+        builder.createCondBr(lhs, trueBB, rhsBB);
         
+        builder.setInsertPoint(trueBB);
+        builder.createStore(builder.createInt(1), resAddr);
+        builder.createBr(mergeBB);
+
         builder.setInsertPoint(rhsBB);
         node->rhs->accept(*this);
         auto rhs = val;
