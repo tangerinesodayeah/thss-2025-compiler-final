@@ -54,6 +54,7 @@ private:
 class BasicBlock;
 class Function;
 class Module;
+class GlobalVariable;
 
 class Instruction : public User {
 public:
@@ -144,11 +145,22 @@ private:
     Function *parent_;
 };
 
+class Argument : public Value {
+public:
+    Argument(Type *ty, std::string name, Function *parent = nullptr)
+        : Value(ty, name), parent_(parent) {}
+    std::string print() const override { return "%" + name_; }
+private:
+    Function *parent_;
+};
+
 class Function : public Value {
 public:
     Function(FunctionType *ty, std::string name, Module *parent = nullptr);
     std::list<BasicBlock*> &getBlocks() { return blocks_; }
     void insert(BasicBlock *bb) { blocks_.push_back(bb); }
+    
+    const std::vector<Argument*> &getArgs() const { return args_; }
     
     // Print the full function definition
     std::string printFunc() const;
@@ -161,17 +173,29 @@ public:
 
 private:
     std::list<BasicBlock*> blocks_;
+    std::vector<Argument*> args_;
     Module *parent_;
     std::unordered_map<std::string, int> nameCounts_;
 };
 
+class GlobalVariable : public User {
+public:
+    GlobalVariable(Type *ty, std::string name, Constant *initVal, Module *parent = nullptr);
+    std::string print() const override;
+    std::string printGlobal() const;
+private:
+    Constant *initVal_;
+    Module *parent_;
+};
 
 class Module {
 public:
     void addFunction(Function *f) { functions_.push_back(f); }
+    void addGlobalVariable(GlobalVariable *g) { globals_.push_back(g); }
     std::string printModule() const;
 private:
     std::vector<Function*> functions_;
+    std::vector<GlobalVariable*> globals_;
 };
 
 

@@ -182,12 +182,30 @@ void IRGenerator::visit(ReturnStmt* node) {
 
 void IRGenerator::visit(VarDecl* node) {
     for (auto& def : node->defs) {
-        auto addr = builder.createAlloca(def->name, ir::Type::getInt32Ty());
-        builder.symTable->insert(def->name, addr);
-        
-        if (def->initVal) {
-            def->initVal->accept(*this);
-            builder.createStore(val, addr);
+        if (builder.getInsertPoint() == nullptr) {
+            // Global variable
+            ir::Constant *initVal = nullptr;
+            if (def->initVal) {
+                if (auto lit = dynamic_cast<IntLiteral*>(def->initVal.get())) {
+                    initVal = ir::ConstantInt::get(lit->value);
+                } else {
+                    // TODO: Support constant expression evaluation
+                    initVal = ir::ConstantInt::get(0); 
+                }
+            } else {
+                initVal = ir::ConstantInt::get(0);
+            }
+            auto addr = builder.createGlobalVariable(def->name, ir::Type::getInt32Ty(), initVal);
+            builder.symTable->insert(def->name, addr);
+        } else {
+            // Local variable
+            auto addr = builder.createAlloca(def->name, ir::Type::getInt32Ty());
+            builder.symTable->insert(def->name, addr);
+            
+            if (def->initVal) {
+                def->initVal->accept(*this);
+                builder.createStore(val, addr);
+            }
         }
     }
 }
@@ -208,22 +226,20 @@ void IRGenerator::visit(FuncDef* node) {
     builder.symTable->enterScope();
     
     // Handle params
-    auto& blocks = func->getBlocks();
-    if (blocks.empty()) {
-        // Should have been created by setFunction if not exists
+    auto& args = func->getArgs();
+    for (size_t i = 0; i < node->params.size(); ++i) {
+        auto paramName = node->params[i]->name;
+        auto argVal = args[i];
+        
+        auto addr = builder.createAlloca(paramName, ir::Type::getInt32Ty());
+        builder.createStore(argVal, addr);
+        builder.symTable->insert(paramName, addr);
     }
-    
-    // We need to get arguments from function and store them to alloca
-    // But IR Function doesn't seem to store arguments as Values easily accessible here?
-    // Usually Function has arguments.
-    // Let's check IR.h for Function arguments.
-    // It doesn't seem to have explicit Argument values.
-    // We might need to create them or assume they are available.
-    // For now, let's skip param handling details or assume we can get them.
     
     node->body->accept(*this);
     
     builder.symTable->exitScope();
+    builder.setInsertPoint(nullptr); // Reset insert point for next global decls
 }
 
 void IRGenerator::visit(CompUnit* node) {

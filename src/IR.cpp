@@ -176,6 +176,13 @@ std::string BasicBlock::printBlock() const {
 Function::Function(FunctionType *ty, std::string name, Module *parent)
     : Value(ty, name), parent_(parent) {
     if (parent) parent->addFunction(this);
+    
+    // Create arguments
+    int i = 0;
+    for (auto paramTy : ty->getParams()) {
+        auto arg = new Argument(paramTy, "arg" + std::to_string(i++), this);
+        args_.push_back(arg);
+    }
 }
 
 std::string Function::print() const {
@@ -195,7 +202,10 @@ std::string Function::getUniqueName(const std::string &hint) {
 std::string Function::printFunc() const {
 
     std::string s = "define " + static_cast<FunctionType*>(type_)->getReturnType()->print() + " @" + name_ + "(";
-    // Params would go here if we tracked them as Values
+    for (size_t i = 0; i < args_.size(); ++i) {
+        if (i > 0) s += ", ";
+        s += args_[i]->getType()->print() + " " + args_[i]->print();
+    }
     s += ") {\n";
     for (auto bb : blocks_) {
         s += bb->printBlock();
@@ -204,8 +214,31 @@ std::string Function::printFunc() const {
     return s;
 }
 
+GlobalVariable::GlobalVariable(Type *ty, std::string name, Constant *initVal, Module *parent)
+    : User(ty, name), initVal_(initVal), parent_(parent) {
+    if (parent) parent->addGlobalVariable(this);
+}
+
+std::string GlobalVariable::print() const {
+    return "@" + name_;
+}
+
+std::string GlobalVariable::printGlobal() const {
+    // type_ is PointerType to the actual type
+    std::string s = "@" + name_ + " = global " + static_cast<PointerType*>(type_)->getPointeeTy()->print() + " ";
+    if (initVal_) {
+        s += initVal_->print();
+    } else {
+        s += "0";
+    }
+    return s;
+}
+
 std::string Module::printModule() const {
     std::string s;
+    for (auto g : globals_) {
+        s += g->printGlobal() + "\n";
+    }
     for (auto f : functions_) {
         s += f->printFunc() + "\n";
     }

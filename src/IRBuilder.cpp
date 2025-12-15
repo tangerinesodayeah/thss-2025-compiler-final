@@ -13,6 +13,11 @@ ir::Value* IRBuilder::createAlloca(const std::string &name, ir::Type *ty) {
     return inst;
 }
 
+ir::Value* IRBuilder::createGlobalVariable(const std::string &name, ir::Type *ty, ir::Constant *initVal) {
+    auto ptrTy = new ir::PointerType(ty);
+    return new ir::GlobalVariable(ptrTy, name, initVal, module);
+}
+
 ir::Value* IRBuilder::createLoad(const std::string &name) {
     // Lookup address in symbol table
     // SymbolTable stores void*, we cast to ir::Value*

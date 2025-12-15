@@ -23,6 +23,7 @@ public:
 
     // 变量
     ir::Value* createAlloca(const std::string &name, ir::Type *ty = nullptr); // Default to i32 if null
+    ir::Value* createGlobalVariable(const std::string &name, ir::Type *ty, ir::Constant *initVal);
     ir::Value* createLoad(const std::string &name);
     ir::Value* createStore(ir::Value *value, ir::Value *addr);
 
