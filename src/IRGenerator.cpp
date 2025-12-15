@@ -363,8 +363,7 @@ ir::Constant* createGlobalInit(InitListExpr* expr, ir::Type* type) {
     }
 }
 
-void handleLocalZeroInit(IRGenerator* gen, ir::Value* baseAddr, ir::Type* type) {
-    auto& builder = gen->builder;
+void IRGenerator::handleLocalZeroInit(ir::Value* baseAddr, ir::Type* type) {
     if (auto arrTy = dynamic_cast<ir::ArrayType*>(type)) {
         size_t size = arrTy->getElementCount();
         auto elemTy = arrTy->getElementType();
@@ -373,15 +372,14 @@ void handleLocalZeroInit(IRGenerator* gen, ir::Value* baseAddr, ir::Type* type) 
             indices.push_back(builder.createInt(0));
             indices.push_back(builder.createInt(i));
             auto elemAddr = builder.createGEP(baseAddr, indices);
-            handleLocalZeroInit(gen, elemAddr, elemTy);
+            handleLocalZeroInit(elemAddr, elemTy);
         }
     } else {
         builder.createStore(builder.createInt(0), baseAddr);
     }
 }
 
-void handleLocalArrayInit(IRGenerator* gen, ir::Value* baseAddr, ir::Type* type, InitListExpr* expr) {
-    auto& builder = gen->builder;
+void IRGenerator::handleLocalArrayInit(ir::Value* baseAddr, ir::Type* type, InitListExpr* expr) {
     if (auto arrTy = dynamic_cast<ir::ArrayType*>(type)) {
         size_t size = arrTy->getElementCount();
         auto elemTy = arrTy->getElementType();
@@ -395,19 +393,19 @@ void handleLocalArrayInit(IRGenerator* gen, ir::Value* baseAddr, ir::Type* type,
             if (i < expr->values.size()) {
                 auto& valExpr = expr->values[i];
                 if (auto subList = dynamic_cast<InitListExpr*>(valExpr.get())) {
-                    handleLocalArrayInit(gen, elemAddr, elemTy, subList);
+                    handleLocalArrayInit(elemAddr, elemTy, subList);
                 } else {
-                    valExpr->accept(*gen);
-                    builder.createStore(gen->val, elemAddr);
+                    valExpr->accept(*this);
+                    builder.createStore(val, elemAddr);
                 }
             } else {
-                handleLocalZeroInit(gen, elemAddr, elemTy);
+                handleLocalZeroInit(elemAddr, elemTy);
             }
         }
     } else {
         if (!expr->values.empty()) {
-            expr->values[0]->accept(*gen);
-            builder.createStore(gen->val, baseAddr);
+            expr->values[0]->accept(*this);
+            builder.createStore(val, baseAddr);
         }
     }
 }
@@ -459,7 +457,7 @@ void IRGenerator::visit(VarDecl* node) {
             
             if (def->initVal) {
                 if (auto initList = dynamic_cast<InitListExpr*>(def->initVal.get())) {
-                    handleLocalArrayInit(this, addr, varTy, initList);
+                    handleLocalArrayInit(addr, varTy, initList);
                 } else {
                     if (!varTy->isArrayTy()) {
                         def->initVal->accept(*this);

@@ -30,6 +30,9 @@ public:
     ir::Value* getVal() { return val; }
 
 private:
+    void handleLocalZeroInit(ir::Value* baseAddr, ir::Type* type);
+    void handleLocalArrayInit(ir::Value* baseAddr, ir::Type* type, InitListExpr* expr);
+
     IRBuilder& builder;
     ir::Value* val = nullptr; // Used to pass values between visit methods
 
