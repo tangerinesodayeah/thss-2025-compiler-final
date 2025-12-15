@@ -12,7 +12,8 @@ public:
         IntegerTyID,
         PointerTyID,
         FunctionTyID,
-        LabelTyID
+        LabelTyID,
+        ArrayTyID
     };
 
     explicit Type(TypeID tid) : tid_(tid) {}
@@ -25,6 +26,7 @@ public:
     bool isPointerTy() const { return tid_ == PointerTyID; }
     bool isFunctionTy() const { return tid_ == FunctionTyID; }
     bool isLabelTy() const { return tid_ == LabelTyID; }
+    bool isArrayTy() const { return tid_ == ArrayTyID; }
 
     static Type *getVoidTy();
     static Type *getInt32Ty();
@@ -87,6 +89,23 @@ class LabelType : public Type {
 public:
     LabelType() : Type(LabelTyID) {}
     std::string print() const override { return "label"; }
+};
+
+class ArrayType : public Type {
+public:
+    ArrayType(Type *elementType, uint64_t elementCount)
+        : Type(ArrayTyID), elementType_(elementType), elementCount_(elementCount) {}
+    
+    Type *getElementType() const { return elementType_; }
+    uint64_t getElementCount() const { return elementCount_; }
+    
+    std::string print() const override {
+        return "[" + std::to_string(elementCount_) + " x " + elementType_->print() + "]";
+    }
+    
+private:
+    Type *elementType_;
+    uint64_t elementCount_;
 };
 
 } // namespace ir

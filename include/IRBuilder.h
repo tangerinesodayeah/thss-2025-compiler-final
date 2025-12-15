@@ -29,6 +29,8 @@ public:
 
     // 运算
     ir::Value* createBinary(const std::string &op, ir::Value *lhs, ir::Value *rhs);
+    ir::Value* createGEP(ir::Value *ptr, std::vector<ir::Value*> indices);
+    ir::Value* createZExt(ir::Value *val, ir::Type *destTy);
 
     // 函数
     ir::Function* createFunction(const std::string &name, ir::FunctionType *ty);

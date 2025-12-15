@@ -7,30 +7,137 @@ void IRGenerator::visit(IntLiteral* node) {
 }
 
 void IRGenerator::visit(VarExpr* node) {
-    // If it's an array access, we need to handle it.
-    // For now, assume scalar variable load.
-    // If it's used as l-value, AssignStmt handles it.
-    // Here we assume it's an r-value load.
-    val = builder.createLoad(node->name);
+    auto addrVoid = builder.symTable->lookup(node->name);
+    auto addr = static_cast<ir::Value*>(addrVoid);
+    
+    if (node->indices.empty()) {
+        // Scalar load or array decay?
+        // If addr is array type, we should decay to pointer.
+        // But here we assume scalar load if no indices.
+        // If it is an array, but no indices, it means it's used as a pointer (e.g. func arg).
+        auto ptrTy = static_cast<ir::PointerType*>(addr->getType());
+        if (ptrTy->getPointeeTy()->isArrayTy()) {
+            // Decay array to pointer: &arr[0]
+            std::vector<ir::Value*> indices;
+            indices.push_back(builder.createInt(0));
+            indices.push_back(builder.createInt(0));
+            val = builder.createGEP(addr, indices);
+        } else {
+            val = builder.createLoad(node->name);
+        }
+    } else {
+        // Array access
+        std::vector<ir::Value*> indices;
+        // First index is 0 if it's a local array (alloca returns pointer to array)
+        // If it's a pointer (func arg), first index is the first dimension.
+        // Wait, alloca returns T*. If T is [10 x i32], we have [10 x i32]*.
+        // To access element, we need 0, i.
+        // If T is i32*, we have i32**. Load gives i32*. Then we index i.
+        
+        auto ptrTy = static_cast<ir::PointerType*>(addr->getType());
+        if (ptrTy->getPointeeTy()->isArrayTy()) {
+            indices.push_back(builder.createInt(0));
+        } else if (ptrTy->getPointeeTy()->isPointerTy()) {
+             // It's a pointer variable (e.g. function param int a[] -> int *a)
+             // We need to load the pointer first
+             addr = builder.createLoad(node->name);
+        }
+        
+        for (auto& idx : node->indices) {
+            idx->accept(*this);
+            indices.push_back(val);
+        }
+        
+        auto ptr = builder.createGEP(addr, indices);
+        val = new ir::LoadInst(ptr, builder.currentBlock, builder.currentBlock->getParent()->getUniqueName("load"));
+    }
 }
 
 void IRGenerator::visit(BinaryExpr* node) {
-    node->lhs->accept(*this);
-    auto lhs = val;
-    node->rhs->accept(*this);
-    auto rhs = val;
-    
-    // Short-circuit evaluation for && and || could be implemented here
-    // But for now, let's assume simple binary ops or implement them if needed.
-    // The IRBuilder::createBinary handles basic ops and comparisons.
-    // Logic ops (&&, ||) usually require control flow in LLVM IR (phi nodes or branches),
-    // or i1 arithmetic.
-    // If op is && or ||, we might need special handling.
-    // For simplicity, let's assume the user wants basic arithmetic first.
-    // If the user asks for short-circuit, we need more complex logic.
-    // The provided IRBuilder::createBinary handles +, -, *, /, %, <, <=, >, >=, ==, !=.
-    
-    val = builder.createBinary(node->op, lhs, rhs);
+    if (node->op == "&&") {
+        // Short-circuit AND
+        // if (lhs) { if (rhs) true else false } else false
+        auto func = builder.currentBlock->getParent();
+        auto rhsBB = new ir::BasicBlock(func->getUniqueName("and_rhs"), func);
+        auto mergeBB = new ir::BasicBlock(func->getUniqueName("and_merge"), func);
+        
+        // Result variable
+        auto resAddr = builder.createAlloca("and_res", ir::Type::getInt32Ty());
+        builder.createStore(builder.createInt(0), resAddr); // Default false
+        
+        node->lhs->accept(*this);
+        auto lhs = val;
+        // Convert to bool if needed
+        if (lhs->getType()->isIntegerTy() && static_cast<ir::IntegerType*>(lhs->getType())->getBitWidth() == 32) {
+            lhs = builder.createBinary("!=", lhs, builder.createInt(0));
+        }
+        
+        builder.createCondBr(lhs, rhsBB, mergeBB);
+        
+        builder.setInsertPoint(rhsBB);
+        node->rhs->accept(*this);
+        auto rhs = val;
+        if (rhs->getType()->isIntegerTy() && static_cast<ir::IntegerType*>(rhs->getType())->getBitWidth() == 32) {
+            rhs = builder.createBinary("!=", rhs, builder.createInt(0));
+        }
+        // Store 1 if rhs is true (lhs is already true here)
+        auto zextRhs = builder.createZExt(rhs, ir::Type::getInt32Ty());
+        builder.createStore(zextRhs, resAddr);
+        builder.createBr(mergeBB);
+        
+        builder.setInsertPoint(mergeBB);
+        val = builder.createLoad("and_res_val"); // This load needs to find the alloca, but createLoad uses name lookup.
+        // We can't use createLoad("and_res") because it looks up in symbol table.
+        // We need to load from resAddr directly.
+        val = new ir::LoadInst(resAddr, builder.currentBlock, "and_res_val");
+        
+    } else if (node->op == "||") {
+        // Short-circuit OR
+        // if (lhs) true else { if (rhs) true else false }
+        auto func = builder.currentBlock->getParent();
+        auto rhsBB = new ir::BasicBlock(func->getUniqueName("or_rhs"), func);
+        auto mergeBB = new ir::BasicBlock(func->getUniqueName("or_merge"), func);
+        
+        auto resAddr = builder.createAlloca("or_res", ir::Type::getInt32Ty());
+        builder.createStore(builder.createInt(1), resAddr); // Default true
+        
+        node->lhs->accept(*this);
+        auto lhs = val;
+        if (lhs->getType()->isIntegerTy() && static_cast<ir::IntegerType*>(lhs->getType())->getBitWidth() == 32) {
+            lhs = builder.createBinary("!=", lhs, builder.createInt(0));
+        }
+        
+        builder.createCondBr(lhs, mergeBB, rhsBB);
+        
+        builder.setInsertPoint(rhsBB);
+        node->rhs->accept(*this);
+        auto rhs = val;
+        if (rhs->getType()->isIntegerTy() && static_cast<ir::IntegerType*>(rhs->getType())->getBitWidth() == 32) {
+            rhs = builder.createBinary("!=", rhs, builder.createInt(0));
+        }
+        auto zextRhs = builder.createZExt(rhs, ir::Type::getInt32Ty());
+        builder.createStore(zextRhs, resAddr);
+        builder.createBr(mergeBB);
+        
+        builder.setInsertPoint(mergeBB);
+        val = new ir::LoadInst(resAddr, builder.currentBlock, "or_res_val");
+        
+    } else {
+        node->lhs->accept(*this);
+        auto lhs = val;
+        node->rhs->accept(*this);
+        auto rhs = val;
+        
+        // Type promotion for i1 to i32
+        if (lhs->getType()->isIntegerTy() && static_cast<ir::IntegerType*>(lhs->getType())->getBitWidth() == 1) {
+            lhs = builder.createZExt(lhs, ir::Type::getInt32Ty());
+        }
+        if (rhs->getType()->isIntegerTy() && static_cast<ir::IntegerType*>(rhs->getType())->getBitWidth() == 1) {
+            rhs = builder.createZExt(rhs, ir::Type::getInt32Ty());
+        }
+        
+        val = builder.createBinary(node->op, lhs, rhs);
+    }
 }
 
 void IRGenerator::visit(UnaryExpr* node) {
@@ -42,7 +149,12 @@ void IRGenerator::visit(UnaryExpr* node) {
     } else if (node->op == "-") {
         val = builder.createBinary("-", builder.createInt(0), operand);
     } else if (node->op == "!") {
-        val = builder.createBinary("==", operand, builder.createInt(0));
+        // !operand -> icmp eq operand, 0
+        // Result is i1. If we need i32, we zext it.
+        // But usually UnaryExpr result is used in expression, so we might want i32.
+        // SysY spec: !a returns int 0 or 1.
+        auto cmp = builder.createBinary("==", operand, builder.createInt(0));
+        val = builder.createZExt(cmp, ir::Type::getInt32Ty());
     }
 }
 
@@ -80,9 +192,32 @@ void IRGenerator::visit(AssignStmt* node) {
     node->expr->accept(*this);
     auto exprVal = val;
     
+    // Type promotion
+    if (exprVal->getType()->isIntegerTy() && static_cast<ir::IntegerType*>(exprVal->getType())->getBitWidth() == 1) {
+        exprVal = builder.createZExt(exprVal, ir::Type::getInt32Ty());
+    }
+    
     // Lookup address
     auto addrVoid = builder.symTable->lookup(node->lval->name);
     auto addr = static_cast<ir::Value*>(addrVoid);
+    
+    if (!node->lval->indices.empty()) {
+        // Array assignment
+        std::vector<ir::Value*> indices;
+        auto ptrTy = static_cast<ir::PointerType*>(addr->getType());
+        if (ptrTy->getPointeeTy()->isArrayTy()) {
+            indices.push_back(builder.createInt(0));
+        } else if (ptrTy->getPointeeTy()->isPointerTy()) {
+             addr = builder.createLoad(node->lval->name);
+        }
+        
+        for (auto& idx : node->lval->indices) {
+            idx->accept(*this);
+            indices.push_back(val);
+        }
+        
+        addr = builder.createGEP(addr, indices);
+    }
     
     builder.createStore(exprVal, addr);
 }
@@ -182,29 +317,61 @@ void IRGenerator::visit(ReturnStmt* node) {
 
 void IRGenerator::visit(VarDecl* node) {
     for (auto& def : node->defs) {
+        ir::Type *varTy = ir::Type::getInt32Ty();
+        if (!def->arrayDimensions.empty()) {
+            // Calculate array type
+            // Dimensions are expressions, but for global/local decls they must be constant.
+            // We assume they are IntLiteral for now or simple constant expressions.
+            // We build type from right to left? No, int a[2][3] -> [2 x [3 x i32]]
+            // We need to evaluate dimensions.
+            // Since we don't have constant folding yet, let's assume IntLiteral.
+            
+            for (auto it = def->arrayDimensions.rbegin(); it != def->arrayDimensions.rend(); ++it) {
+                // Evaluate dimension size
+                (*it)->accept(*this);
+                // val should be ConstantInt
+                // But accept() generates instructions. We need compile-time constant.
+                // For now, let's cast the expression node to IntLiteral if possible.
+                // This is a limitation: only literal dimensions supported.
+                if (auto lit = dynamic_cast<IntLiteral*>(it->get())) {
+                    varTy = new ir::ArrayType(varTy, lit->value);
+                } else {
+                    // Error: non-constant array dimension
+                    std::cerr << "Error: Array dimension must be constant literal" << std::endl;
+                }
+            }
+        }
+
         if (builder.getInsertPoint() == nullptr) {
             // Global variable
             ir::Constant *initVal = nullptr;
-            if (def->initVal) {
+            // TODO: Handle array initialization
+            if (varTy->isArrayTy()) {
+                 // Zero init for arrays for now
+                 // We need ConstantArray class for proper initialization
+                 initVal = nullptr; // Will be zeroinitialized
+            } else if (def->initVal) {
                 if (auto lit = dynamic_cast<IntLiteral*>(def->initVal.get())) {
                     initVal = ir::ConstantInt::get(lit->value);
                 } else {
-                    // TODO: Support constant expression evaluation
                     initVal = ir::ConstantInt::get(0); 
                 }
             } else {
                 initVal = ir::ConstantInt::get(0);
             }
-            auto addr = builder.createGlobalVariable(def->name, ir::Type::getInt32Ty(), initVal);
+            auto addr = builder.createGlobalVariable(def->name, varTy, initVal);
             builder.symTable->insert(def->name, addr);
         } else {
             // Local variable
-            auto addr = builder.createAlloca(def->name, ir::Type::getInt32Ty());
+            auto addr = builder.createAlloca(def->name, varTy);
             builder.symTable->insert(def->name, addr);
             
             if (def->initVal) {
-                def->initVal->accept(*this);
-                builder.createStore(val, addr);
+                // TODO: Handle array initialization (memset or element-wise store)
+                if (!varTy->isArrayTy()) {
+                    def->initVal->accept(*this);
+                    builder.createStore(val, addr);
+                }
             }
         }
     }

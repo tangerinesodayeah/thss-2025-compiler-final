@@ -59,7 +59,7 @@ class GlobalVariable;
 class Instruction : public User {
 public:
     enum OpID {
-        Ret, Br, Add, Sub, Mul, SDiv, SRem, Alloca, Load, Store, ICmp, Call
+        Ret, Br, Add, Sub, Mul, SDiv, SRem, Alloca, Load, Store, ICmp, Call, GetElementPtr, ZExt
     };
 
     Instruction(Type *ty, OpID id, BasicBlock *parent, std::string name = "");
@@ -123,6 +123,16 @@ public:
     Predicate getPredicate() const { return pred_; }
 private:
     Predicate pred_;
+};
+
+class GetElementPtrInst : public Instruction {
+public:
+    GetElementPtrInst(Value *ptr, std::vector<Value*> indices, BasicBlock *parent, std::string name = "");
+};
+
+class ZExtInst : public Instruction {
+public:
+    ZExtInst(Value *val, Type *destTy, BasicBlock *parent, std::string name = "");
 };
 
 

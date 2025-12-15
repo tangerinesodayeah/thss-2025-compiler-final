@@ -73,6 +73,18 @@ ir::Value* IRBuilder::createBinary(const std::string &op, ir::Value *lhs, ir::Va
     return inst;
 }
 
+ir::Value* IRBuilder::createGEP(ir::Value *ptr, std::vector<ir::Value*> indices) {
+    auto inst = new ir::GetElementPtrInst(ptr, indices, currentBlock);
+    inst->setName(currentBlock->getParent()->getUniqueName("gep"));
+    return inst;
+}
+
+ir::Value* IRBuilder::createZExt(ir::Value *val, ir::Type *destTy) {
+    auto inst = new ir::ZExtInst(val, destTy, currentBlock);
+    inst->setName(currentBlock->getParent()->getUniqueName("zext"));
+    return inst;
+}
+
 
 ir::Function* IRBuilder::createFunction(const std::string &name, ir::FunctionType *ty) {
     return new ir::Function(ty, name, module);

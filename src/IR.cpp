@@ -36,6 +36,8 @@ std::string Instruction::printInst() const {
         case Br: s += "br "; break;
         case ICmp: s += "icmp "; break;
         case Call: s += "call "; break;
+        case GetElementPtr: s += "getelementptr "; break;
+        case ZExt: s += "zext "; break;
         default: s += "unknown "; break;
     }
     
@@ -101,6 +103,25 @@ std::string Instruction::printInst() const {
         return s;
     }
 
+    if (id_ == GetElementPtr) {
+        // getelementptr <ty>, <ty>* <ptr>, <ty> <idx>...
+        // The first operand is the pointer.
+        // The type of the instruction is the result pointer type, but GEP syntax uses the source element type.
+        auto ptr = operands_[0];
+        auto ptrTy = static_cast<PointerType*>(ptr->getType());
+        s += ptrTy->getPointeeTy()->print() + ", " + ptrTy->print() + " " + ptr->print();
+        for (size_t i = 1; i < operands_.size(); ++i) {
+            s += ", " + operands_[i]->getType()->print() + " " + operands_[i]->print();
+        }
+        return s;
+    }
+
+    if (id_ == ZExt) {
+        // zext <ty> <val> to <ty2>
+        s += operands_[0]->getType()->print() + " " + operands_[0]->print() + " to " + type_->print();
+        return s;
+    }
+
     // Binary ops
     s += type_->print() + " " + operands_[0]->print() + ", " + operands_[1]->print();
     return s;
@@ -135,6 +156,36 @@ ReturnInst::ReturnInst(Value *val, BasicBlock *parent)
 BranchInst::BranchInst(BasicBlock *dest, BasicBlock *parent)
     : Instruction(Type::getVoidTy(), Br, parent) {
     addOperand(dest);
+}
+
+GetElementPtrInst::GetElementPtrInst(Value *ptr, std::vector<Value*> indices, BasicBlock *parent, std::string name)
+    : Instruction(nullptr, GetElementPtr, parent, name) {
+    addOperand(ptr);
+    for (auto idx : indices) addOperand(idx);
+    
+    // Calculate result type
+    // For simplicity, assume we are indexing into an array or pointer.
+    // If ptr is T*, and we have one index, result is T*.
+    // If ptr is [n x T]*, and we have two indices (0, i), result is T*.
+    // This is a simplified type calculation.
+    auto ptrTy = static_cast<PointerType*>(ptr->getType());
+    auto elementTy = ptrTy->getPointeeTy();
+    
+    // If elementTy is ArrayType, and we have indices, we peel off dimensions.
+    // First index steps through the pointer itself (usually 0).
+    // Subsequent indices step into the array.
+    Type *currTy = elementTy;
+    for (size_t i = 1; i < indices.size(); ++i) {
+        if (currTy->isArrayTy()) {
+            currTy = static_cast<ArrayType*>(currTy)->getElementType();
+        }
+    }
+    type_ = new PointerType(currTy);
+}
+
+ZExtInst::ZExtInst(Value *val, Type *destTy, BasicBlock *parent, std::string name)
+    : Instruction(destTy, ZExt, parent, name) {
+    addOperand(val);
 }
 
 BranchInst::BranchInst(Value *cond, BasicBlock *ifTrue, BasicBlock *ifFalse, BasicBlock *parent)
