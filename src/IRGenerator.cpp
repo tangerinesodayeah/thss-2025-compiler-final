@@ -98,10 +98,10 @@ void IRGenerator::visit(BinaryExpr* node) {
         builder.createBr(mergeBB);
         
         builder.setInsertPoint(mergeBB);
-        val = builder.createLoad("and_res_val"); // This load needs to find the alloca, but createLoad uses name lookup.
+        // val = builder.createLoad("and_res_val"); // This load needs to find the alloca, but createLoad uses name lookup.
         // We can't use createLoad("and_res") because it looks up in symbol table.
         // We need to load from resAddr directly.
-        val = new ir::LoadInst(resAddr, builder.currentBlock, "and_res_val");
+        val = new ir::LoadInst(resAddr, builder.currentBlock, func->getUniqueName("and_res_val"));
         
     } else if (node->op == "||") {
         // Short-circuit OR
@@ -132,7 +132,7 @@ void IRGenerator::visit(BinaryExpr* node) {
         builder.createBr(mergeBB);
         
         builder.setInsertPoint(mergeBB);
-        val = new ir::LoadInst(resAddr, builder.currentBlock, "or_res_val");
+        val = new ir::LoadInst(resAddr, builder.currentBlock, func->getUniqueName("or_res_val"));
         
     } else {
         node->lhs->accept(*this);

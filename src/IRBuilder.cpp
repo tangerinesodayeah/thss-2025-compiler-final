@@ -9,7 +9,11 @@ ir::Value* IRBuilder::createAlloca(const std::string &name, ir::Type *ty) {
     // Alloca should be in the entry block usually, but for simplicity we put it in current block
     // or we can find the entry block of the current function.
     // For now, just insert at current point.
-    auto inst = new ir::AllocaInst(ty, currentBlock, name);
+    std::string uniqueName = name;
+    if (currentBlock && currentBlock->getParent()) {
+        uniqueName = currentBlock->getParent()->getUniqueName(name);
+    }
+    auto inst = new ir::AllocaInst(ty, currentBlock, uniqueName);
     return inst;
 }
 
