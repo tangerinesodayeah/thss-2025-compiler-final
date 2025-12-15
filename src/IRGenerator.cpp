@@ -319,7 +319,7 @@ void IRGenerator::visit(ReturnStmt* node) {
 ir::Constant* createZeroInit(ir::Type* type) {
     if (auto arrTy = dynamic_cast<ir::ArrayType*>(type)) {
         std::vector<ir::Constant*> values;
-        for (size_t i = 0; i < arrTy->getNumElements(); ++i) {
+        for (size_t i = 0; i < arrTy->getElementCount(); ++i) {
             values.push_back(createZeroInit(arrTy->getElementType()));
         }
         return new ir::ConstantArray(arrTy, values);
@@ -331,16 +331,16 @@ ir::Constant* createZeroInit(ir::Type* type) {
 ir::Constant* createGlobalInit(InitListExpr* expr, ir::Type* type) {
     if (auto arrTy = dynamic_cast<ir::ArrayType*>(type)) {
         std::vector<ir::Constant*> values;
-        size_t size = arrTy->getNumElements();
+        size_t size = arrTy->getElementCount();
         auto elemTy = arrTy->getElementType();
         
         for (size_t i = 0; i < size; ++i) {
             if (i < expr->values.size()) {
-                auto valExpr = expr->values[i];
-                if (auto subList = std::dynamic_pointer_cast<InitListExpr>(valExpr)) {
-                    values.push_back(createGlobalInit(subList.get(), elemTy));
+                auto& valExpr = expr->values[i];
+                if (auto subList = dynamic_cast<InitListExpr*>(valExpr.get())) {
+                    values.push_back(createGlobalInit(subList, elemTy));
                 } else {
-                    if (auto lit = std::dynamic_pointer_cast<IntLiteral>(valExpr)) {
+                    if (auto lit = dynamic_cast<IntLiteral*>(valExpr.get())) {
                         values.push_back(ir::ConstantInt::get(lit->value));
                     } else {
                         // Fallback for non-literal constant expressions (not fully supported yet)
@@ -355,8 +355,8 @@ ir::Constant* createGlobalInit(InitListExpr* expr, ir::Type* type) {
         return new ir::ConstantArray(arrTy, values);
     } else {
         if (expr->values.empty()) return ir::ConstantInt::get(0);
-        auto valExpr = expr->values[0];
-        if (auto lit = std::dynamic_pointer_cast<IntLiteral>(valExpr)) {
+        auto& valExpr = expr->values[0];
+        if (auto lit = dynamic_cast<IntLiteral*>(valExpr.get())) {
             return ir::ConstantInt::get(lit->value);
         }
         return ir::ConstantInt::get(0);
@@ -366,7 +366,7 @@ ir::Constant* createGlobalInit(InitListExpr* expr, ir::Type* type) {
 void handleLocalZeroInit(IRGenerator* gen, ir::Value* baseAddr, ir::Type* type) {
     auto& builder = gen->builder;
     if (auto arrTy = dynamic_cast<ir::ArrayType*>(type)) {
-        size_t size = arrTy->getNumElements();
+        size_t size = arrTy->getElementCount();
         auto elemTy = arrTy->getElementType();
         for (size_t i = 0; i < size; ++i) {
             std::vector<ir::Value*> indices;
@@ -383,7 +383,7 @@ void handleLocalZeroInit(IRGenerator* gen, ir::Value* baseAddr, ir::Type* type) 
 void handleLocalArrayInit(IRGenerator* gen, ir::Value* baseAddr, ir::Type* type, InitListExpr* expr) {
     auto& builder = gen->builder;
     if (auto arrTy = dynamic_cast<ir::ArrayType*>(type)) {
-        size_t size = arrTy->getNumElements();
+        size_t size = arrTy->getElementCount();
         auto elemTy = arrTy->getElementType();
         
         for (size_t i = 0; i < size; ++i) {
@@ -393,9 +393,9 @@ void handleLocalArrayInit(IRGenerator* gen, ir::Value* baseAddr, ir::Type* type,
             auto elemAddr = builder.createGEP(baseAddr, indices);
             
             if (i < expr->values.size()) {
-                auto valExpr = expr->values[i];
-                if (auto subList = std::dynamic_pointer_cast<InitListExpr>(valExpr)) {
-                    handleLocalArrayInit(gen, elemAddr, elemTy, subList.get());
+                auto& valExpr = expr->values[i];
+                if (auto subList = dynamic_cast<InitListExpr*>(valExpr.get())) {
+                    handleLocalArrayInit(gen, elemAddr, elemTy, subList);
                 } else {
                     valExpr->accept(*gen);
                     builder.createStore(gen->val, elemAddr);
@@ -435,9 +435,9 @@ void IRGenerator::visit(VarDecl* node) {
             // Global variable
             ir::Constant *initVal = nullptr;
             if (def->initVal) {
-                if (auto initList = std::dynamic_pointer_cast<InitListExpr>(def->initVal)) {
-                    initVal = createGlobalInit(initList.get(), varTy);
-                } else if (auto lit = std::dynamic_pointer_cast<IntLiteral>(def->initVal)) {
+                if (auto initList = dynamic_cast<InitListExpr*>(def->initVal.get())) {
+                    initVal = createGlobalInit(initList, varTy);
+                } else if (auto lit = dynamic_cast<IntLiteral*>(def->initVal.get())) {
                     initVal = ir::ConstantInt::get(lit->value);
                 } else {
                     initVal = ir::ConstantInt::get(0); 
@@ -458,8 +458,8 @@ void IRGenerator::visit(VarDecl* node) {
             builder.symTable->insert(def->name, addr);
             
             if (def->initVal) {
-                if (auto initList = std::dynamic_pointer_cast<InitListExpr>(def->initVal)) {
-                    handleLocalArrayInit(this, addr, varTy, initList.get());
+                if (auto initList = dynamic_cast<InitListExpr*>(def->initVal.get())) {
+                    handleLocalArrayInit(this, addr, varTy, initList);
                 } else {
                     if (!varTy->isArrayTy()) {
                         def->initVal->accept(*this);
