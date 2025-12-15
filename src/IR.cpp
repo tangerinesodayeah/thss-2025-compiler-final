@@ -280,7 +280,7 @@ std::string GlobalVariable::printGlobal() const {
     if (initVal_) {
         s += initVal_->print();
     } else {
-        s += "0";
+        s += "zeroinitializer";
     }
     return s;
 }
