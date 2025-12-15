@@ -4,6 +4,8 @@
 #include "SysYLexer.h"
 #include "SysYParser.h"
 #include "ASTBuilder.h"
+#include "IRGenerator.h"
+#include "IR.h"
 
 using namespace antlr4;
 
@@ -33,13 +35,17 @@ int main(int argc, char* argv[]) {
     ASTBuilder builder;
     auto ast = builder.buildAST(tree);
 
-    // TODO: 使用 IRGenerator 生成 LLVM IR
-    std::cout << "AST built successfully!" << std::endl;
-    std::cout << "Number of top-level declarations: " << ast->decls.size() << std::endl;
+    // IR Generation
+    ir::Module module;
+    SymbolTable symTable;
+    IRBuilder irBuilder(&module, &symTable);
+    IRGenerator generator(irBuilder);
+    
+    ast->accept(generator);
 
-    // 输出到文件（暂时输出提示信息）
+    // Output to file
     std::ofstream output(argv[2]);
-    output << "; LLVM IR generation not implemented yet\n";
+    output << module.printModule();
     output.close();
 
     return 0;

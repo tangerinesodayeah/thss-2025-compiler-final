@@ -94,3 +94,12 @@ void IRBuilder::createBr(ir::BasicBlock *dest) {
 void IRBuilder::createCondBr(ir::Value *cond, ir::BasicBlock *ifTrue, ir::BasicBlock *ifFalse) {
     new ir::BranchInst(cond, ifTrue, ifFalse, currentBlock);
 }
+
+ir::Value* IRBuilder::createCall(ir::Function *func, std::vector<ir::Value*> args) {
+    auto inst = new ir::CallInst(func, args, currentBlock);
+    auto funcTy = dynamic_cast<ir::FunctionType*>(func->getType());
+    if (funcTy && !funcTy->getReturnType()->isVoidTy()) {
+         inst->setName(currentBlock->getParent()->getUniqueName("call"));
+    }
+    return inst;
+}

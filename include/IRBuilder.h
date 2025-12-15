@@ -32,6 +32,7 @@ public:
     // 函数
     ir::Function* createFunction(const std::string &name, ir::FunctionType *ty);
     void setFunction(ir::Function *func); // Maybe sets insert point to entry?
+    ir::Value* createCall(ir::Function *func, std::vector<ir::Value*> args);
 
     // return
     void createRet(ir::Value *value);
