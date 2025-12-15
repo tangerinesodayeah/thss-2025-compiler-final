@@ -257,6 +257,10 @@ void IRGenerator::visit(IfStmt* node) {
     node->cond->accept(*this);
     auto cond = val;
     
+    if (cond->getType()->isIntegerTy() && static_cast<ir::IntegerType*>(cond->getType())->getBitWidth() == 32) {
+        cond = builder.createBinary("!=", cond, builder.createInt(0));
+    }
+    
     builder.createCondBr(cond, thenBB, elseBB ? elseBB : mergeBB);
     
     builder.setInsertPoint(thenBB);
@@ -288,6 +292,11 @@ void IRGenerator::visit(WhileStmt* node) {
     builder.setInsertPoint(condBB);
     node->cond->accept(*this);
     auto cond = val;
+    
+    if (cond->getType()->isIntegerTy() && static_cast<ir::IntegerType*>(cond->getType())->getBitWidth() == 32) {
+        cond = builder.createBinary("!=", cond, builder.createInt(0));
+    }
+    
     builder.createCondBr(cond, bodyBB, afterBB);
     
     loopCondStack.push_back(condBB);
