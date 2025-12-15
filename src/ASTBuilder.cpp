@@ -343,7 +343,8 @@ std::any ASTBuilder::visitLVal(SysYParser::LValContext *ctx) {
 }
 
 std::any ASTBuilder::visitNumber(SysYParser::NumberContext *ctx) {
-    int value = std::stoi(ctx->getText());
+    std::string text = ctx->getText();
+    int value = static_cast<int>(std::stoul(text, nullptr, 0));
     return wrapPtr(std::make_unique<IntLiteral>(value));
 }
 
