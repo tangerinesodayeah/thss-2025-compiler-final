@@ -251,28 +251,47 @@ std::string Function::print() const {
 }
 
 std::string Function::getUniqueName(const std::string &hint) {
-    std::string name = hint;
-    if (nameCounts_.find(name) != nameCounts_.end()) {
-        name += std::to_string(nameCounts_[hint]++);
+    // Return a unique name based on the provided hint.
+    // Keep a counter per hint and append the counter when needed.
+    int &cnt = nameCounts_[hint];
+    if (cnt == 0) {
+        // first use, set counter to 1 and return hint as-is
+        cnt = 1;
+        return hint;
     } else {
-        nameCounts_[name] = 1;
+        // subsequent uses, append current counter then increment
+        std::string name = hint + std::to_string(cnt);
+        cnt++;
+        return name;
     }
-    return name;
 }
 
 std::string Function::printFunc() const {
 
-    std::string s = "define " + static_cast<FunctionType*>(type_)->getReturnType()->print() + " @" + name_ + "(";
+    // If the function has no blocks, print it as a declaration instead of a definition.
+    std::ostringstream oss;
+    auto retTy = static_cast<FunctionType*>(type_)->getReturnType();
+    if (blocks_.empty()) {
+        oss << "declare " << retTy->print() << " @" << name_ << "(";
+        for (size_t i = 0; i < args_.size(); ++i) {
+            if (i > 0) oss << ", ";
+            oss << args_[i]->getType()->print() << " " << args_[i]->print();
+        }
+        oss << ")";
+        return oss.str();
+    }
+
+    oss << "define " << retTy->print() << " @" << name_ << "(";
     for (size_t i = 0; i < args_.size(); ++i) {
-        if (i > 0) s += ", ";
-        s += args_[i]->getType()->print() + " " + args_[i]->print();
+        if (i > 0) oss << ", ";
+        oss << args_[i]->getType()->print() << " " << args_[i]->print();
     }
-    s += ") {\n";
+    oss << ") {\n";
     for (auto bb : blocks_) {
-        s += bb->printBlock();
+        oss << bb->printBlock();
     }
-    s += "}\n";
-    return s;
+    oss << "}\n";
+    return oss.str();
 }
 
 GlobalVariable::GlobalVariable(Type *ty, std::string name, Constant *initVal, Module *parent)

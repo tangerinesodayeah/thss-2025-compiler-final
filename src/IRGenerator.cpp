@@ -75,10 +75,9 @@ void IRGenerator::visit(BinaryExpr* node) {
         auto mergeBB = new ir::BasicBlock(func->getUniqueName("and_merge"), func);
         
         // Result variable
-        auto entryBB = func->getBlocks().front();
-        auto resAddr = new ir::AllocaInst(ir::Type::getInt32Ty(), entryBB, "and_res");
-        entryBB->getInstList().pop_back();
-        entryBB->getInstList().push_front(resAddr);
+    auto entryBB = func->getBlocks().front();
+    // Use builder to create an alloca in the entry block with a unique name
+    auto resAddr = builder.createAlloca("and_res", ir::Type::getInt32Ty());
         // builder.createStore(builder.createInt(0), resAddr); // Default false
         
         node->lhs->accept(*this);
@@ -119,10 +118,9 @@ void IRGenerator::visit(BinaryExpr* node) {
         auto rhsBB = new ir::BasicBlock(func->getUniqueName("or_rhs"), func);
         auto mergeBB = new ir::BasicBlock(func->getUniqueName("or_merge"), func);
         
-        auto entryBB = func->getBlocks().front();
-        auto resAddr = new ir::AllocaInst(ir::Type::getInt32Ty(), entryBB, "or_res");
-        entryBB->getInstList().pop_back();
-        entryBB->getInstList().push_front(resAddr);
+    auto entryBB = func->getBlocks().front();
+    // Create alloca via builder to ensure proper unique naming and insertion
+    auto resAddr = builder.createAlloca("or_res", ir::Type::getInt32Ty());
         // builder.createStore(builder.createInt(1), resAddr); // Default true
         
         node->lhs->accept(*this);
@@ -225,9 +223,21 @@ void IRGenerator::visit(CallExpr* node) {
     }
 
     std::vector<ir::Value*> args;
-    for (auto& arg : node->args) {
-        arg->accept(*this);
-        args.push_back(val);
+    auto funcTy = dynamic_cast<ir::FunctionType*>(func->getType());
+    for (size_t i = 0; i < node->args.size(); ++i) {
+        node->args[i]->accept(*this);
+        ir::Value* argVal = val;
+        // If function expects a pointer but we have an array value (loaded), pass the address instead
+        if (funcTy && i < funcTy->getParams().size()) {
+            auto expected = funcTy->getParams()[i];
+            if (dynamic_cast<ir::PointerType*>(expected) && argVal->getType()->isArrayTy()) {
+                if (auto loadInst = dynamic_cast<ir::LoadInst*>(argVal)) {
+                    // loadInst operand 0 is the pointer to the array; pass it
+                    argVal = loadInst->getOperand(0);
+                }
+            }
+        }
+        args.push_back(argVal);
     }
     val = builder.createCall(func, args);
 }
