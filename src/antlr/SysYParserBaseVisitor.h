@@ -1,5 +1,5 @@
 
-// Generated from SysYParser.g4 by ANTLR 4.13.1
+// Generated from /mnt/d/编译原理/thss-2025-compiler-final/SysYParser.g4 by ANTLR 4.13.1
 
 #pragma once
 
@@ -184,22 +184,6 @@ public:
   }
 
   virtual std::any visitConstExp(SysYParser::ConstExpContext *ctx) override {
-    return visitChildren(ctx);
-  }
-
-  virtual std::any visitAddExp(SysYParser::AddExpContext *ctx) override {
-    return visitChildren(ctx);
-  }
-
-  virtual std::any visitMulExp(SysYParser::MulExpContext *ctx) override {
-    return visitChildren(ctx);
-  }
-
-  virtual std::any visitUnaryExp(SysYParser::UnaryExpContext *ctx) override {
-    return visitChildren(ctx);
-  }
-
-  virtual std::any visitPrimaryExp(SysYParser::PrimaryExpContext *ctx) override {
     return visitChildren(ctx);
   }
 

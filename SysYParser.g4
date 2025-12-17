@@ -126,27 +126,5 @@ funcRParams
     ;
 
 constExp
-    : addExp
-    ;
-
-addExp
-    : mulExp
-    | addExp (PLUS | MINUS) mulExp
-    ;
-
-mulExp
-    : unaryExp
-    | mulExp (MUL | DIV | MOD) unaryExp
-    ;
-
-unaryExp
-    : primaryExp
-    | IDENT L_PAREN funcRParams? R_PAREN
-    | unaryOp unaryExp
-    ;
-
-primaryExp
-    : L_PAREN exp R_PAREN
-    | lVal
-    | number
+    : exp
     ;

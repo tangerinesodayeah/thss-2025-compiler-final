@@ -1,5 +1,5 @@
 
-// Generated from SysYParser.g4 by ANTLR 4.13.1
+// Generated from /mnt/d/编译原理/thss-2025-compiler-final/SysYParser.g4 by ANTLR 4.13.1
 
 #pragma once
 
@@ -104,14 +104,6 @@ public:
     virtual std::any visitFuncRParams(SysYParser::FuncRParamsContext *context) = 0;
 
     virtual std::any visitConstExp(SysYParser::ConstExpContext *context) = 0;
-
-    virtual std::any visitAddExp(SysYParser::AddExpContext *context) = 0;
-
-    virtual std::any visitMulExp(SysYParser::MulExpContext *context) = 0;
-
-    virtual std::any visitUnaryExp(SysYParser::UnaryExpContext *context) = 0;
-
-    virtual std::any visitPrimaryExp(SysYParser::PrimaryExpContext *context) = 0;
 
 
 };

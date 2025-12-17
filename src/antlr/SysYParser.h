@@ -1,5 +1,5 @@
 
-// Generated from SysYParser.g4 by ANTLR 4.13.1
+// Generated from /mnt/d/编译原理/thss-2025-compiler-final/SysYParser.g4 by ANTLR 4.13.1
 
 #pragma once
 
@@ -26,8 +26,7 @@ public:
     RuleFuncDef = 9, RuleFuncType = 10, RuleFuncFParams = 11, RuleFuncFParam = 12, 
     RuleBlock = 13, RuleBlockItem = 14, RuleStmt = 15, RuleExp = 16, RuleCond = 17, 
     RuleLVal = 18, RuleNumber = 19, RuleUnaryOp = 20, RuleFuncRParams = 21, 
-    RuleConstExp = 22, RuleAddExp = 23, RuleMulExp = 24, RuleUnaryExp = 25, 
-    RulePrimaryExp = 26
+    RuleConstExp = 22
   };
 
   explicit SysYParser(antlr4::TokenStream *input);
@@ -69,11 +68,7 @@ public:
   class NumberContext;
   class UnaryOpContext;
   class FuncRParamsContext;
-  class ConstExpContext;
-  class AddExpContext;
-  class MulExpContext;
-  class UnaryExpContext;
-  class PrimaryExpContext; 
+  class ConstExpContext; 
 
   class  CompUnitContext : public antlr4::ParserRuleContext {
   public:
@@ -733,7 +728,7 @@ public:
   public:
     ConstExpContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
-    AddExpContext *addExp();
+    ExpContext *exp();
 
 
     virtual std::any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
@@ -742,82 +737,11 @@ public:
 
   ConstExpContext* constExp();
 
-  class  AddExpContext : public antlr4::ParserRuleContext {
-  public:
-    AddExpContext(antlr4::ParserRuleContext *parent, size_t invokingState);
-    virtual size_t getRuleIndex() const override;
-    MulExpContext *mulExp();
-    AddExpContext *addExp();
-    antlr4::tree::TerminalNode *PLUS();
-    antlr4::tree::TerminalNode *MINUS();
-
-
-    virtual std::any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
-   
-  };
-
-  AddExpContext* addExp();
-  AddExpContext* addExp(int precedence);
-  class  MulExpContext : public antlr4::ParserRuleContext {
-  public:
-    MulExpContext(antlr4::ParserRuleContext *parent, size_t invokingState);
-    virtual size_t getRuleIndex() const override;
-    UnaryExpContext *unaryExp();
-    MulExpContext *mulExp();
-    antlr4::tree::TerminalNode *MUL();
-    antlr4::tree::TerminalNode *DIV();
-    antlr4::tree::TerminalNode *MOD();
-
-
-    virtual std::any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
-   
-  };
-
-  MulExpContext* mulExp();
-  MulExpContext* mulExp(int precedence);
-  class  UnaryExpContext : public antlr4::ParserRuleContext {
-  public:
-    UnaryExpContext(antlr4::ParserRuleContext *parent, size_t invokingState);
-    virtual size_t getRuleIndex() const override;
-    PrimaryExpContext *primaryExp();
-    antlr4::tree::TerminalNode *IDENT();
-    antlr4::tree::TerminalNode *L_PAREN();
-    antlr4::tree::TerminalNode *R_PAREN();
-    FuncRParamsContext *funcRParams();
-    UnaryOpContext *unaryOp();
-    UnaryExpContext *unaryExp();
-
-
-    virtual std::any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
-   
-  };
-
-  UnaryExpContext* unaryExp();
-
-  class  PrimaryExpContext : public antlr4::ParserRuleContext {
-  public:
-    PrimaryExpContext(antlr4::ParserRuleContext *parent, size_t invokingState);
-    virtual size_t getRuleIndex() const override;
-    antlr4::tree::TerminalNode *L_PAREN();
-    ExpContext *exp();
-    antlr4::tree::TerminalNode *R_PAREN();
-    LValContext *lVal();
-    NumberContext *number();
-
-
-    virtual std::any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
-   
-  };
-
-  PrimaryExpContext* primaryExp();
-
 
   bool sempred(antlr4::RuleContext *_localctx, size_t ruleIndex, size_t predicateIndex) override;
 
   bool expSempred(ExpContext *_localctx, size_t predicateIndex);
   bool condSempred(CondContext *_localctx, size_t predicateIndex);
-  bool addExpSempred(AddExpContext *_localctx, size_t predicateIndex);
-  bool mulExpSempred(MulExpContext *_localctx, size_t predicateIndex);
 
   // By default the static state used to implement the parser is lazily initialized during the first
   // call to the constructor. You can call this function if you wish to initialize the static state

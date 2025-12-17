@@ -6,28 +6,34 @@ ir::Value* IRBuilder::createInt(int v) {
 
 ir::Value* IRBuilder::createAlloca(const std::string &name, ir::Type *ty) {
     if (!ty) ty = ir::Type::getInt32Ty();
-    
+    // If we are inserting inside a function, always ask the function for
+    // a unique name. Prefer to allocate in the entry block so alloca's
+    // are at function entry.
     if (currentBlock && currentBlock->getParent()) {
         auto func = currentBlock->getParent();
+        std::string uniqueName = func->getUniqueName(name);
+
         if (!func->getBlocks().empty()) {
             auto entry = func->getBlocks().front();
-            std::string uniqueName = func->getUniqueName(name);
-            
             auto inst = new ir::AllocaInst(ty, entry, uniqueName);
-            
-            // Move to front of entry block
+            // Move newly created alloca to the front of the entry block's
+            // instruction list so it behaves like a typical alloca.
             auto &instList = entry->getInstList();
             if (instList.size() > 1) {
-                 auto it = instList.end();
-                 it--; 
-                 instList.splice(instList.begin(), instList, it);
+                auto it = instList.end();
+                it--; 
+                instList.splice(instList.begin(), instList, it);
             }
             return inst;
+        } else {
+            // No blocks yet, create alloca at current insertion point.
+            return new ir::AllocaInst(ty, currentBlock, uniqueName);
         }
     }
-    
-    auto inst = new ir::AllocaInst(ty, currentBlock, name);
-    return inst;
+
+    // Fallback: no current function/context; create unnamed alloca with
+    // the provided name (this is an unusual case).
+    return new ir::AllocaInst(ty, currentBlock, name);
 }
 
 ir::Value* IRBuilder::createGlobalVariable(const std::string &name, ir::Type *ty, ir::Constant *initVal) {

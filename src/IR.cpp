@@ -145,7 +145,17 @@ BinaryInst::BinaryInst(OpID id, Value *lhs, Value *rhs, BasicBlock *parent)
 }
 
 AllocaInst::AllocaInst(Type *ty, BasicBlock *parent, std::string name)
-    : Instruction(new PointerType(ty), Alloca, parent, name) {}
+    : Instruction(new PointerType(ty), Alloca, parent, "") {
+    // Ensure the alloca has a unique name within the parent function if available.
+    std::string finalName = name;
+    if (parent && parent->getParent()) {
+        finalName = parent->getParent()->getUniqueName(name);
+        // Assign the unique name on the base Value/User storage
+        setName(finalName);
+    } else {
+        setName(finalName);
+    }
+}
 
 LoadInst::LoadInst(Value *ptr, BasicBlock *parent, std::string name)
     : Instruction(static_cast<PointerType*>(ptr->getType())->getPointeeTy(), Load, parent, name) {
@@ -250,19 +260,37 @@ std::string Function::print() const {
     return "@" + name_;
 }
 
-std::string Function::getUniqueName(const std::string &hint) {
-    // Return a unique name based on the provided hint.
-    // Keep a counter per hint and append the counter when needed.
+std::string Function::getUniqueName(const std::string &hint_orig) {
+    std::string hint = hint_orig;
+    // Truncate hint if it is too long to avoid issues with assemblers/linkers
+    // and to keep IR readable.
+    if (hint.length() > 64) {
+        hint = hint.substr(0, 64);
+    }
+
+    // Always return a suffixed unique name based on the provided hint.
+    // This avoids handing out the raw hint which can collide in some
+    // insertion/order scenarios; instead we always append a monotonically
+    // increasing counter per hint.
     int &cnt = nameCounts_[hint];
-    if (cnt == 0) {
-        // first use, set counter to 1 and return hint as-is
-        cnt = 1;
-        return hint;
-    } else {
-        // subsequent uses, append current counter then increment
+    if (cnt == 0) cnt = 1;
+
+    // Helper: check whether a candidate name is already used in this function
+    auto nameUsed = [this](const std::string &n) {
+        for (auto a : args_) if (a->getName() == n) return true;
+        for (auto bb : blocks_) {
+            if (bb->getName() == n) return true;
+            for (auto inst : bb->getInstList()) {
+                if (inst->getName() == n) return true;
+            }
+        }
+        return false;
+    };
+
+    while (true) {
         std::string name = hint + std::to_string(cnt);
         cnt++;
-        return name;
+        if (!nameUsed(name)) return name;
     }
 }
 

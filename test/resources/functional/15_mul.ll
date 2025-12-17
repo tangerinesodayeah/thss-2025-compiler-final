@@ -1,12 +1,12 @@
 define i32 @main() {
 entry:
-  %a = alloca i32
-  %b = alloca i32
-  store i32 10, i32* %a
-  store i32 5, i32* %b
-  %a_val = load i32, i32* %a
-  %b_val = load i32, i32* %b
-  %mul = mul i32 %a_val, %b_val
-  ret i32 %mul
+  %b11 = alloca i32
+  %a11 = alloca i32
+  store i32 10, i32* %a11
+  store i32 5, i32* %b11
+  %a_val1 = load i32, i32* %a11
+  %b_val1 = load i32, i32* %b11
+  %mul1 = mul i32 %a_val1, %b_val1
+  ret i32 %mul1
 }
 

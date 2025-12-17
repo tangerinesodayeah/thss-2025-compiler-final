@@ -5,9 +5,10 @@ entry:
 
 define i32 @main() {
 entry:
-  %a = alloca i32
-  store i32 4, i32* %a
-  %a_val = load i32, i32* %a
-  ret i32 %a_val
+  %a11 = alloca i32
+  %call1 = call i32 @defn()
+  store i32 %call1, i32* %a11
+  %a_val1 = load i32, i32* %a11
+  ret i32 %a_val1
 }
 

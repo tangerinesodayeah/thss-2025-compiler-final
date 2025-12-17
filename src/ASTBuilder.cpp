@@ -349,5 +349,5 @@ std::any ASTBuilder::visitNumber(SysYParser::NumberContext *ctx) {
 }
 
 std::any ASTBuilder::visitConstExp(SysYParser::ConstExpContext *ctx) {
-    return visit(ctx->addExp());
+    return visit(ctx->exp());
 }

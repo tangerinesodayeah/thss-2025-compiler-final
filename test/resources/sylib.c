@@ -4,7 +4,13 @@
 #include"sylib.h"
 /* Input & output functions */
 int getint(){int t; scanf("%d",&t); return t; }
-int getch(){char c; scanf("%c",&c); return (int)c; }
+int getch(){
+    char c;
+    while(1) {
+        if(scanf("%c",&c) == EOF) return -1;
+        if(c != 13) return (int)c;
+    }
+}
 float getfloat(){
     float n;
     scanf("%a", &n);

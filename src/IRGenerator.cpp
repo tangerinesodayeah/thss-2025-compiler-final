@@ -373,8 +373,7 @@ void IRGenerator::visit(ReturnStmt* node) {
         node->expr->accept(*this);
         builder.createRet(val);
     } else {
-        // Void return?
-        // builder.createRet(nullptr); // Need to handle void return in IRBuilder
+        builder.createRet(nullptr);
     }
 }
 
@@ -568,10 +567,9 @@ void IRGenerator::visit(VarDecl* node) {
                 if (auto initList = dynamic_cast<InitListExpr*>(def->initVal.get())) {
                     size_t index = 0;
                     initVal = createGlobalInit(initList, index, varTy);
-                } else if (auto lit = dynamic_cast<IntLiteral*>(def->initVal.get())) {
-                    initVal = ir::ConstantInt::get(lit->value);
                 } else {
-                    initVal = ir::ConstantInt::get(0); 
+                    int val = evalConst(def->initVal.get(), builder.symTable);
+                    initVal = ir::ConstantInt::get(val);
                 }
             } else {
                 // Zero init

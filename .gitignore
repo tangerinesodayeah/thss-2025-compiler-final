@@ -22,3 +22,7 @@
 
 build/
 dist/
+
+# test outputs
+*.ll
+*.output
