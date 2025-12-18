@@ -61,7 +61,20 @@ void IRGenerator::visit(VarExpr* node) {
         }
         
         auto ptr = builder.createGEP(addr, indices);
-        val = new ir::LoadInst(ptr, builder.currentBlock, builder.currentBlock->getParent()->getUniqueName("load"));
+        
+        // Check if we need to decay array to pointer
+        if (auto ptrTy = dynamic_cast<ir::PointerType*>(ptr->getType())) {
+            if (ptrTy->getPointeeTy()->isArrayTy()) {
+                std::vector<ir::Value*> decayIndices;
+                decayIndices.push_back(builder.createInt(0));
+                decayIndices.push_back(builder.createInt(0));
+                val = builder.createGEP(ptr, decayIndices);
+            } else {
+                val = new ir::LoadInst(ptr, builder.currentBlock, builder.currentBlock->getParent()->getUniqueName("load"));
+            }
+        } else {
+            val = new ir::LoadInst(ptr, builder.currentBlock, builder.currentBlock->getParent()->getUniqueName("load"));
+        }
     }
 }
 
