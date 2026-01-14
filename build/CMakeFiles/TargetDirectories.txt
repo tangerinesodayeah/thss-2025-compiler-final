@@ -1,0 +1,4 @@
+/Users/zhaowenrui/Desktop/编译汇编/assignment 2/build/CMakeFiles/compiler.dir
+/Users/zhaowenrui/Desktop/编译汇编/assignment 2/build/CMakeFiles/ir_test.dir
+/Users/zhaowenrui/Desktop/编译汇编/assignment 2/build/CMakeFiles/edit_cache.dir
+/Users/zhaowenrui/Desktop/编译汇编/assignment 2/build/CMakeFiles/rebuild_cache.dir
