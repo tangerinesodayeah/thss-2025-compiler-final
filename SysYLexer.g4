@@ -10,6 +10,9 @@ WHILE: 'while';
 BREAK: 'break';
 CONTINUE: 'continue';
 RETURN: 'return';
+SWITCH: 'switch';
+CASE: 'case';
+DEFAULT: 'default';
 
 // Operators
 PLUS: '+';
@@ -40,6 +43,7 @@ L_BRACE: '{';
 R_BRACE: '}';
 L_BRACKET: '[';
 R_BRACKET: ']';
+COLON: ':';
 
 // Integer Constants
 INT_CONST

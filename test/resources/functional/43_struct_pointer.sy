@@ -1,0 +1,14 @@
+struct Point {
+    float x;
+    float y;
+};
+
+int main() {
+    struct Point p;
+    p.x = 1.0f;
+    p.y = 2.0f;
+    struct Point* ptr = &p;
+    ptr->x = ptr->x + 3.0f;
+    
+    return (int)p.x;
+}

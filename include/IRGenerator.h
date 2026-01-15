@@ -22,6 +22,8 @@ public:
     void visit(BreakStmt* node) override;
     void visit(ContinueStmt* node) override;
     void visit(ReturnStmt* node) override;
+    void visit(SwitchCase* node) override;
+    void visit(SwitchStmt* node) override;
 
     void visit(VarDecl* node) override;
     void visit(FuncDef* node) override;

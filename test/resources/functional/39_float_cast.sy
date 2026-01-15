@@ -1,0 +1,7 @@
+int main() {
+    float f = 3.7f;
+    int i = (int)f;
+    float f2 = (float)i;
+    
+    return (int)f2;
+}

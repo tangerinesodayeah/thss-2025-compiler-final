@@ -1,0 +1,21 @@
+int testDefault() {
+    int x = 99;
+    int result = 0;
+    
+    switch (x) {
+        case 1:
+            result = 100;
+            break;
+        case 2:
+            result = 200;
+            break;
+        default:
+            result = 999;
+    }
+    
+    return result;
+}
+
+int main() {
+    return testDefault();
+}

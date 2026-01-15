@@ -143,6 +143,24 @@ public:
     void accept(ASTVisitor& visitor) override;
 };
 
+class SwitchCase : public ASTNode {
+public:
+    std::unique_ptr<Expr> value; // 对于case，value为常量；对于default，value为nullptr
+    std::vector<std::unique_ptr<ASTNode>> body; // 语句列表
+    
+    SwitchCase(std::unique_ptr<Expr> v) : value(std::move(v)) {}
+    void accept(ASTVisitor& visitor) override;
+};
+
+class SwitchStmt : public Stmt {
+public:
+    std::unique_ptr<Expr> cond;
+    std::vector<std::unique_ptr<SwitchCase>> cases;
+    
+    SwitchStmt(std::unique_ptr<Expr> c) : cond(std::move(c)) {}
+    void accept(ASTVisitor& visitor) override;
+};
+
 // ========== 声明 ==========
 class Decl : public ASTNode {
 public:
@@ -215,6 +233,8 @@ public:
     virtual void visit(BreakStmt* node) = 0;
     virtual void visit(ContinueStmt* node) = 0;
     virtual void visit(ReturnStmt* node) = 0;
+    virtual void visit(SwitchCase* node) = 0;
+    virtual void visit(SwitchStmt* node) = 0;
     
     virtual void visit(VarDecl* node) = 0;
     virtual void visit(FuncDef* node) = 0;

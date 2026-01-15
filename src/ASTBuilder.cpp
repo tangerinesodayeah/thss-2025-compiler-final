@@ -232,6 +232,52 @@ std::any ASTBuilder::visitReturnStmt(SysYParser::ReturnStmtContext *ctx) {
     }
 }
 
+std::any ASTBuilder::visitSwitchStmt(SysYParser::SwitchStmtContext *ctx) {
+    auto cond = unwrapPtr<Expr>(visit(ctx->exp()));
+    auto switchStmt = std::make_unique<SwitchStmt>(std::move(cond));
+    
+    for (auto switchCaseCtx : ctx->switchCase()) {
+        auto switchCase = unwrapPtr<SwitchCase>(visit(switchCaseCtx));
+        switchStmt->cases.push_back(std::move(switchCase));
+    }
+    
+    return wrapPtr(std::move(switchStmt));
+}
+
+std::any ASTBuilder::visitCaseStmt(SysYParser::CaseStmtContext *ctx) {
+    auto intConstText = ctx->INT_CONST()->getText();
+    auto intConst = std::make_unique<IntLiteral>(std::stoi(intConstText));
+    auto switchCase = std::make_unique<SwitchCase>(std::move(intConst));
+    
+    for (auto blockItemCtx : ctx->blockItem()) {
+        if (blockItemCtx->decl()) {
+            auto decl = unwrapPtr<Decl>(visitDecl(blockItemCtx->decl()));
+            switchCase->body.push_back(std::move(decl));
+        } else if (blockItemCtx->stmt()) {
+            auto stmt = unwrapPtr<Stmt>(visit(blockItemCtx->stmt()));
+            switchCase->body.push_back(std::move(stmt));
+        }
+    }
+    
+    return wrapPtr(std::move(switchCase));
+}
+
+std::any ASTBuilder::visitDefaultStmt(SysYParser::DefaultStmtContext *ctx) {
+    auto switchCase = std::make_unique<SwitchCase>(nullptr);
+    
+    for (auto blockItemCtx : ctx->blockItem()) {
+        if (blockItemCtx->decl()) {
+            auto decl = unwrapPtr<Decl>(visitDecl(blockItemCtx->decl()));
+            switchCase->body.push_back(std::move(decl));
+        } else if (blockItemCtx->stmt()) {
+            auto stmt = unwrapPtr<Stmt>(visit(blockItemCtx->stmt()));
+            switchCase->body.push_back(std::move(stmt));
+        }
+    }
+    
+    return wrapPtr(std::move(switchCase));
+}
+
 std::any ASTBuilder::visitParenExpr(SysYParser::ParenExprContext *ctx) {
     return visit(ctx->exp());
 }

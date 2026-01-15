@@ -390,6 +390,83 @@ void IRGenerator::visit(ReturnStmt* node) {
     }
 }
 
+void IRGenerator::visit(SwitchCase* node) {
+    // SwitchCase is handled within visit(SwitchStmt*)
+    // This method should not be called directly
+}
+
+void IRGenerator::visit(SwitchStmt* node) {
+    auto func = builder.currentBlock->getParent();
+    
+    // 生成条件表达式的值
+    node->cond->accept(*this);
+    auto condVal = val;
+    
+    // 创建基本块
+    auto afterBB = new ir::BasicBlock(func->getUniqueName("switch_after"), func);
+    auto defaultBB = afterBB; // 默认跳到afterBB，如果有default case会覆盖
+    
+    std::vector<std::pair<int, ir::BasicBlock*>> caseBlocks;
+    std::vector<ir::BasicBlock*> caseBodyBBs;
+    
+    // 为每个case创建基本块
+    for (size_t i = 0; i < node->cases.size(); ++i) {
+        auto& switchCase = node->cases[i];
+        auto caseBB = new ir::BasicBlock(func->getUniqueName("case_" + std::to_string(i)), func);
+        caseBodyBBs.push_back(caseBB);
+        
+        if (switchCase->value) {
+            // case语句
+            if (auto intLit = dynamic_cast<IntLiteral*>(switchCase->value.get())) {
+                caseBlocks.push_back({intLit->value, caseBB});
+            }
+        } else {
+            // default语句
+            defaultBB = caseBB;
+        }
+    }
+    
+    // 生成条件判断：使用if-else链实现switch
+    for (const auto& [caseVal, caseBB] : caseBlocks) {
+        auto cmp = builder.createBinary("==", condVal, builder.createInt(caseVal));
+        auto nextBB = new ir::BasicBlock(func->getUniqueName("switch_next"), func);
+        builder.createCondBr(cmp, caseBB, nextBB);
+        builder.setInsertPoint(nextBB);
+    }
+    
+    // 跳转到default或after
+    builder.createBr(defaultBB);
+    
+    // 推入break栈
+    loopAfterStack.push_back(afterBB);
+    
+    // 生成每个case的代码（注意case的穿透特性）
+    for (size_t i = 0; i < node->cases.size(); ++i) {
+        builder.setInsertPoint(caseBodyBBs[i]);
+        
+        // 生成case体
+        for (auto& item : node->cases[i]->body) {
+            item->accept(*this);
+        }
+        
+        // 如果当前块没有终止指令且不是最后一个case，则自动fallthrough
+        if (!builder.currentBlock->getInstList().empty() && 
+            !builder.currentBlock->getInstList().back()->isTerminator()) {
+            // fallthrough到下一个case
+            if (i + 1 < node->cases.size()) {
+                builder.createBr(caseBodyBBs[i + 1]);
+            } else {
+                builder.createBr(afterBB);
+            }
+        }
+    }
+    
+    // 弹出break栈
+    loopAfterStack.pop_back();
+    
+    builder.setInsertPoint(afterBB);
+}
+
 // Helper functions for array initialization
 // ir::Constant* createZeroInit(ir::Type* type) moved to member function
 

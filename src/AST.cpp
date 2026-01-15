@@ -56,6 +56,14 @@ void ReturnStmt::accept(ASTVisitor& visitor) {
     visitor.visit(this);
 }
 
+void SwitchCase::accept(ASTVisitor& visitor) {
+    visitor.visit(this);
+}
+
+void SwitchStmt::accept(ASTVisitor& visitor) {
+    visitor.visit(this);
+}
+
 void VarDecl::accept(ASTVisitor& visitor) {
     visitor.visit(this);
 }

@@ -1,0 +1,21 @@
+struct Point {
+    float x;
+    float y;
+};
+
+struct Rectangle {
+    struct Point topLeft;
+    struct Point bottomRight;
+};
+
+int main() {
+    struct Rectangle rect;
+    rect.topLeft.x = 0.0f;
+    rect.topLeft.y = 10.0f;
+    rect.bottomRight.x = 5.0f;
+    rect.bottomRight.y = 0.0f;
+    
+    float width = rect.bottomRight.x - rect.topLeft.x;
+    
+    return (int)width;
+}

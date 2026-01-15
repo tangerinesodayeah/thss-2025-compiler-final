@@ -1,0 +1,12 @@
+struct Point {
+    float x;
+    float y;
+};
+
+int main() {
+    struct Point p;
+    p.x = 1.5f;
+    p.y = 2.5f;
+    
+    return (int)(p.x + p.y);
+}

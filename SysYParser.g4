@@ -86,6 +86,12 @@ stmt
     | BREAK SEMICOLON                                             # breakStmt
     | CONTINUE SEMICOLON                                          # continueStmt
     | RETURN exp? SEMICOLON                                       # returnStmt
+    | SWITCH L_PAREN exp R_PAREN L_BRACE switchCase* R_BRACE      # switchStmt
+    ;
+
+switchCase
+    : CASE INT_CONST COLON (blockItem)*                          # caseStmt
+    | DEFAULT COLON (blockItem)*                                  # defaultStmt
     ;
 
 // 表达式

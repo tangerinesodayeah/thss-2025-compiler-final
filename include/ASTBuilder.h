@@ -31,6 +31,9 @@ public:
     std::any visitBreakStmt(SysYParser::BreakStmtContext *ctx) override;
     std::any visitContinueStmt(SysYParser::ContinueStmtContext *ctx) override;
     std::any visitReturnStmt(SysYParser::ReturnStmtContext *ctx) override;
+    std::any visitSwitchStmt(SysYParser::SwitchStmtContext *ctx) override;
+    std::any visitCaseStmt(SysYParser::CaseStmtContext *ctx) override;
+    std::any visitDefaultStmt(SysYParser::DefaultStmtContext *ctx) override;
     std::any visitParenExpr(SysYParser::ParenExprContext *ctx) override;
     std::any visitLValExpr(SysYParser::LValExprContext *ctx) override;
     std::any visitNumberExpr(SysYParser::NumberExprContext *ctx) override;

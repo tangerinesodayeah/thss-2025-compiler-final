@@ -1,0 +1,20 @@
+int testFallthrough() {
+    int x = 1;
+    int result = 0;
+    
+    switch (x) {
+        case 1:
+            result = result + 100;
+        case 2:
+            result = result + 200;
+            break;
+        default:
+            result = 999;
+    }
+    
+    return result;
+}
+
+int main() {
+    return testFallthrough();
+}
