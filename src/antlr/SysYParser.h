@@ -1,5 +1,5 @@
 
-// Generated from /mnt/d/编译原理/thss-2025-compiler-final/SysYParser.g4 by ANTLR 4.13.1
+// Generated from /mnt/f/编译原理/thss-2025-compiler-final/SysYParser.g4 by ANTLR 4.13.1
 
 #pragma once
 
@@ -13,20 +13,21 @@ class  SysYParser : public antlr4::Parser {
 public:
   enum {
     CONST = 1, INT = 2, VOID = 3, IF = 4, ELSE = 5, WHILE = 6, BREAK = 7, 
-    CONTINUE = 8, RETURN = 9, PLUS = 10, MINUS = 11, MUL = 12, DIV = 13, 
-    MOD = 14, EQ = 15, NEQ = 16, LT = 17, GT = 18, LE = 19, GE = 20, AND = 21, 
-    OR = 22, NOT = 23, ASSIGN = 24, SEMICOLON = 25, COMMA = 26, L_PAREN = 27, 
-    R_PAREN = 28, L_BRACE = 29, R_BRACE = 30, L_BRACKET = 31, R_BRACKET = 32, 
-    INT_CONST = 33, IDENT = 34, WS = 35, LINE_COMMENT = 36, BLOCK_COMMENT = 37
+    CONTINUE = 8, RETURN = 9, SWITCH = 10, CASE = 11, DEFAULT = 12, PLUS = 13, 
+    MINUS = 14, MUL = 15, DIV = 16, MOD = 17, EQ = 18, NEQ = 19, LT = 20, 
+    GT = 21, LE = 22, GE = 23, AND = 24, OR = 25, NOT = 26, ASSIGN = 27, 
+    SEMICOLON = 28, COMMA = 29, L_PAREN = 30, R_PAREN = 31, L_BRACE = 32, 
+    R_BRACE = 33, L_BRACKET = 34, R_BRACKET = 35, COLON = 36, INT_CONST = 37, 
+    IDENT = 38, WS = 39, LINE_COMMENT = 40, BLOCK_COMMENT = 41
   };
 
   enum {
     RuleCompUnit = 0, RuleDecl = 1, RuleConstDecl = 2, RuleBType = 3, RuleConstDef = 4, 
     RuleConstInitVal = 5, RuleVarDecl = 6, RuleVarDef = 7, RuleInitVal = 8, 
     RuleFuncDef = 9, RuleFuncType = 10, RuleFuncFParams = 11, RuleFuncFParam = 12, 
-    RuleBlock = 13, RuleBlockItem = 14, RuleStmt = 15, RuleExp = 16, RuleCond = 17, 
-    RuleLVal = 18, RuleNumber = 19, RuleUnaryOp = 20, RuleFuncRParams = 21, 
-    RuleConstExp = 22
+    RuleBlock = 13, RuleBlockItem = 14, RuleStmt = 15, RuleSwitchCase = 16, 
+    RuleExp = 17, RuleCond = 18, RuleLVal = 19, RuleNumber = 20, RuleUnaryOp = 21, 
+    RuleFuncRParams = 22, RuleConstExp = 23
   };
 
   explicit SysYParser(antlr4::TokenStream *input);
@@ -62,6 +63,7 @@ public:
   class BlockContext;
   class BlockItemContext;
   class StmtContext;
+  class SwitchCaseContext;
   class ExpContext;
   class CondContext;
   class LValContext;
@@ -406,6 +408,22 @@ public:
    
   };
 
+  class  SwitchStmtContext : public StmtContext {
+  public:
+    SwitchStmtContext(StmtContext *ctx);
+
+    antlr4::tree::TerminalNode *SWITCH();
+    antlr4::tree::TerminalNode *L_PAREN();
+    ExpContext *exp();
+    antlr4::tree::TerminalNode *R_PAREN();
+    antlr4::tree::TerminalNode *L_BRACE();
+    antlr4::tree::TerminalNode *R_BRACE();
+    std::vector<SwitchCaseContext *> switchCase();
+    SwitchCaseContext* switchCase(size_t i);
+
+    virtual std::any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+  };
+
   class  ExprStmtContext : public StmtContext {
   public:
     ExprStmtContext(StmtContext *ctx);
@@ -497,6 +515,46 @@ public:
   };
 
   StmtContext* stmt();
+
+  class  SwitchCaseContext : public antlr4::ParserRuleContext {
+  public:
+    SwitchCaseContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+   
+    SwitchCaseContext() = default;
+    void copyFrom(SwitchCaseContext *context);
+    using antlr4::ParserRuleContext::copyFrom;
+
+    virtual size_t getRuleIndex() const override;
+
+   
+  };
+
+  class  CaseStmtContext : public SwitchCaseContext {
+  public:
+    CaseStmtContext(SwitchCaseContext *ctx);
+
+    antlr4::tree::TerminalNode *CASE();
+    antlr4::tree::TerminalNode *INT_CONST();
+    antlr4::tree::TerminalNode *COLON();
+    std::vector<BlockItemContext *> blockItem();
+    BlockItemContext* blockItem(size_t i);
+
+    virtual std::any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+  };
+
+  class  DefaultStmtContext : public SwitchCaseContext {
+  public:
+    DefaultStmtContext(SwitchCaseContext *ctx);
+
+    antlr4::tree::TerminalNode *DEFAULT();
+    antlr4::tree::TerminalNode *COLON();
+    std::vector<BlockItemContext *> blockItem();
+    BlockItemContext* blockItem(size_t i);
+
+    virtual std::any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+  };
+
+  SwitchCaseContext* switchCase();
 
   class  ExpContext : public antlr4::ParserRuleContext {
   public:

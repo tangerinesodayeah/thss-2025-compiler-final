@@ -1,5 +1,5 @@
 
-// Generated from /mnt/d/编译原理/thss-2025-compiler-final/SysYLexer.g4 by ANTLR 4.13.1
+// Generated from /mnt/f/编译原理/thss-2025-compiler-final/SysYLexer.g4 by ANTLR 4.13.1
 
 #pragma once
 
@@ -13,11 +13,12 @@ class  SysYLexer : public antlr4::Lexer {
 public:
   enum {
     CONST = 1, INT = 2, VOID = 3, IF = 4, ELSE = 5, WHILE = 6, BREAK = 7, 
-    CONTINUE = 8, RETURN = 9, PLUS = 10, MINUS = 11, MUL = 12, DIV = 13, 
-    MOD = 14, EQ = 15, NEQ = 16, LT = 17, GT = 18, LE = 19, GE = 20, AND = 21, 
-    OR = 22, NOT = 23, ASSIGN = 24, SEMICOLON = 25, COMMA = 26, L_PAREN = 27, 
-    R_PAREN = 28, L_BRACE = 29, R_BRACE = 30, L_BRACKET = 31, R_BRACKET = 32, 
-    INT_CONST = 33, IDENT = 34, WS = 35, LINE_COMMENT = 36, BLOCK_COMMENT = 37
+    CONTINUE = 8, RETURN = 9, SWITCH = 10, CASE = 11, DEFAULT = 12, PLUS = 13, 
+    MINUS = 14, MUL = 15, DIV = 16, MOD = 17, EQ = 18, NEQ = 19, LT = 20, 
+    GT = 21, LE = 22, GE = 23, AND = 24, OR = 25, NOT = 26, ASSIGN = 27, 
+    SEMICOLON = 28, COMMA = 29, L_PAREN = 30, R_PAREN = 31, L_BRACE = 32, 
+    R_BRACE = 33, L_BRACKET = 34, R_BRACKET = 35, COLON = 36, INT_CONST = 37, 
+    IDENT = 38, WS = 39, LINE_COMMENT = 40, BLOCK_COMMENT = 41
   };
 
   explicit SysYLexer(antlr4::CharStream *input);

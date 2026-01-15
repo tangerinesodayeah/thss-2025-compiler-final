@@ -1,5 +1,5 @@
 
-// Generated from /mnt/d/编译原理/thss-2025-compiler-final/SysYParser.g4 by ANTLR 4.13.1
+// Generated from /mnt/f/编译原理/thss-2025-compiler-final/SysYParser.g4 by ANTLR 4.13.1
 
 #pragma once
 
@@ -70,6 +70,12 @@ public:
     virtual std::any visitContinueStmt(SysYParser::ContinueStmtContext *context) = 0;
 
     virtual std::any visitReturnStmt(SysYParser::ReturnStmtContext *context) = 0;
+
+    virtual std::any visitSwitchStmt(SysYParser::SwitchStmtContext *context) = 0;
+
+    virtual std::any visitCaseStmt(SysYParser::CaseStmtContext *context) = 0;
+
+    virtual std::any visitDefaultStmt(SysYParser::DefaultStmtContext *context) = 0;
 
     virtual std::any visitUnaryExpr(SysYParser::UnaryExprContext *context) = 0;
 

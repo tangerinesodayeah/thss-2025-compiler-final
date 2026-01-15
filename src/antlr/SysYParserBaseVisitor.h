@@ -1,5 +1,5 @@
 
-// Generated from /mnt/d/编译原理/thss-2025-compiler-final/SysYParser.g4 by ANTLR 4.13.1
+// Generated from /mnt/f/编译原理/thss-2025-compiler-final/SysYParser.g4 by ANTLR 4.13.1
 
 #pragma once
 
@@ -116,6 +116,18 @@ public:
   }
 
   virtual std::any visitReturnStmt(SysYParser::ReturnStmtContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual std::any visitSwitchStmt(SysYParser::SwitchStmtContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual std::any visitCaseStmt(SysYParser::CaseStmtContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual std::any visitDefaultStmt(SysYParser::DefaultStmtContext *ctx) override {
     return visitChildren(ctx);
   }
 
